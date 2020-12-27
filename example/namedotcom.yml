@@ -1,0 +1,24 @@
+###
+# File: product.yml
+# Author: Ming Cheng<mingcheng@outlook.com>
+#
+# Created Date: Friday, December 25th 2020, 9:24:08 pm
+# Last Modified: Sunday, December 27th 2020, 8:38:03 pm
+#
+# http://www.opensource.org/licenses/MIT
+###
+
+logfile: "/var/log/simplyddns.log"
+debug: Yes
+
+ddns:
+  - source:
+      type: "myipip"
+      interval: 3600
+    target:
+      type: namedotcom
+      key: "<your-key>"
+      token: "<your-token>"
+      #proxy: "<you-proxy-address:port>"
+      domains:
+        - sub.example.com
