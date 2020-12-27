@@ -1,0 +1,19 @@
+###
+# File: foo.yml
+# Author: Ming Cheng<mingcheng@outlook.com>
+#
+# Created Date: Friday, December 25th 2020, 9:24:08 pm
+# Last Modified: Sunday, December 27th 2020, 9:05:25 pm
+#
+# http://www.opensource.org/licenses/MIT
+###
+
+logfile: "/dev/stderr"
+debug: Yes
+
+ddns:
+  - source:
+      type: "lo"
+      interval: 60 # 1 minute
+    target:
+      type: "sleep"
