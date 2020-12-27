@@ -1,5 +1,7 @@
 # Simply DDNS
 
+[![Build Status](https://ci.wooramel.cn/api/badges/mingcheng/simplyddns/status.svg)](https://ci.wooramel.cn/mingcheng/simplyddns)
+
 根据指定的 IP 地址，更新对应的 DNS 记录。
 
 ## 思路
@@ -18,8 +20,6 @@
 
 [将 DDNS 动态注册 DNS](https://en.wikipedia.org/wiki/Dynamic_DNS) 的行为抽象为两种：一种为如何获取 IP 地址、另外一种为如何配置 DNS，简单的将如下图所示：
 
-
-
 因此，主要实现了这个两个接口，并且对应上配置就可以灵活的搭配以及运行，详细参见扩展章节。
 
 ## 安装
@@ -31,7 +31,6 @@
 ### docker-compose
 
 推荐您使用容器的方式运行本应用，在本程序中还提供了 docker-compose.yml 以及 Dockerfile 文件，方便构建和运行镜像。
-
 
 // @TODO
 
@@ -57,26 +56,68 @@ ddns:
 
 ### Webhook
 
-
-
 ## 扩展
 
 扩展 SimplyDDNS 其实非常的容易，可以分别参考 source 以及 target 中对应的文件即可，比较简单的是 `lo.go` 以及 target 目录中的 `sleep.go` 文件，因为它们并不做任何实际的事情。
 
 ### 已实现模块
 
-#### source / lo
+#### source
 
-#### source / static
+_lo_
 
-#### source / myip
+这个模块只返回 Lookup 地址，用于测试使用
 
-#### target / sleep
+_static_
 
-#### starget / namedotcom
+指定对应的静态地址，通常用于固定 IP 地址的情况
+
+_myip_
+
+通过访问 ipip.net 得知访问的 IP 地址，推荐的获取 IP 地址方法之一，用于访问主机有公网地址并能直接访问的情况（如 DMZ 主机）。
+
+#### target
+
+_sleep_
+
+啥都不干，就是 Sleep 暂停几秒，可以作为测试使用。
+
+_namedotcom_
+
+使用 Name.com 作为域名服务的后端。因为 Name.com 有白名单验证，所以如果不是本机访问可以考虑使用代理的方式请求（具体请参见 `target/namedotcom_test.go` 这个文件）。
 
 ## FAQ
 
-//@TODO
+_如果我只有一种请求 IP 地址的方式但是有多个域名，这样子一来重复配置二来看起来配置非常的臃肿，有没有更好的方案？_
+
+这是个比较常见的场景，你可以考虑使用 Yaml 的引用特性减少重复的配置，例如：
+
+```yaml
+defaults: &defaults
+  type: lo
+  interval: 60
+```
+
+首先定义每分钟返回个 lo 的回传本地地址，然后配置对应的域名更新：
+
+```yaml
+ddns:
+  - source:
+      <<: *defaults
+    target:
+      type: "sleep"
+      domains:
+        - a.com
+        - b.com
+  - source:
+      <<: *defaults
+    target:
+      type: "another"
+      domains:
+        - c.com
+        - d.com
+```
+
+这样子配置后，只需要关心 target 也就是域名的配置即可。
 
 `- eof -`

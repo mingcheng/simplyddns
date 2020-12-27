@@ -12,7 +12,8 @@ tmp
 /.idea/
 vendor/
 /dist
-/simplyddns.yml # only for test, so ignore
+# only for test, so ignore
+/simplyddns.yml
 
 # Architecture specific extensions/prefixes
 trace.out
