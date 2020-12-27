@@ -1,0 +1,28 @@
+###
+# File: .drone.yaml
+# Author: Ming Cheng<mingcheng@outlook.com>
+#
+# Created Date: Thursday, September 17th 2020, 7:16:54 pm
+# Last Modified: Sunday, December 27th 2020, 9:37:26 pm
+#
+# http://www.opensource.org/licenses/MIT
+###
+
+kind: pipeline
+name: default
+type: docker
+
+steps:
+  - name: test
+    image: golang:1.15
+      GOPROXY: "https://mirrors.aliyun.com/goproxy,https://goproxy.cn,direct"
+    commands:
+      - make test
+
+  - name: build
+    image: golang:1.15
+    environment:
+      GOPROXY: "https://mirrors.aliyun.com/goproxy,https://goproxy.cn,direct"
+    commands:
+      - make build
+
