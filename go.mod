@@ -3,7 +3,7 @@ module github.com/mingcheng/simplyddns
 go 1.15
 
 require (
-	github.com/hashicorp/serf v0.8.2
+	github.com/aliyun/alibaba-cloud-sdk-go v1.61.805
 	github.com/jpillora/go-tld v1.1.1
 	github.com/namedotcom/go v0.0.0-20180403034216-08470befbe04
 	github.com/sirupsen/logrus v1.2.0
