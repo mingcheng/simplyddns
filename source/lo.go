@@ -19,7 +19,7 @@ import (
 )
 
 func init() {
-	fn := func(_ context.Context, _ *ddns.JobSource) (*net.IP, error) {
+	fn := func(_ context.Context, _ *ddns.SourceConfig) (*net.IP, error) {
 		ip := net.ParseIP("127.0.0.1")
 		if !ip.IsLoopback() {
 			return nil, fmt.Errorf("%v is not lookback address", ip)

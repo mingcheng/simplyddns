@@ -7,11 +7,11 @@ import (
 )
 
 var (
-	sourceFunc = map[string]func(context.Context, *JobSource) (*net.IP, error){}
-	targetFunc = map[string]func(context.Context, *net.IP, *JobTarget) error{}
+	sourceFunc = map[string]func(context.Context, *SourceConfig) (*net.IP, error){}
+	targetFunc = map[string]func(context.Context, *net.IP, *TargetConfig) error{}
 )
 
-func SourceFunc(name string) (func(context.Context, *JobSource) (*net.IP, error), error) {
+func SourceFunc(name string) (func(context.Context, *SourceConfig) (*net.IP, error), error) {
 	if fn := sourceFunc[name]; fn != nil {
 		return fn, nil
 	}
@@ -19,7 +19,7 @@ func SourceFunc(name string) (func(context.Context, *JobSource) (*net.IP, error)
 	return nil, fmt.Errorf("source func %s is not found", name)
 }
 
-func RegisterSourceFunc(name string, fn func(context.Context, *JobSource) (*net.IP, error)) error {
+func RegisterSourceFunc(name string, fn func(context.Context, *SourceConfig) (*net.IP, error)) error {
 	if fn, _ := SourceFunc(name); fn != nil {
 		return fmt.Errorf("source func %s is already registered", name)
 	}
@@ -28,7 +28,7 @@ func RegisterSourceFunc(name string, fn func(context.Context, *JobSource) (*net.
 	return nil
 }
 
-func TargetFunc(name string) (func(context.Context, *net.IP, *JobTarget) error, error) {
+func TargetFunc(name string) (func(context.Context, *net.IP, *TargetConfig) error, error) {
 	if fn := targetFunc[name]; fn != nil {
 		return fn, nil
 	}
@@ -36,7 +36,7 @@ func TargetFunc(name string) (func(context.Context, *net.IP, *JobTarget) error, 
 	return nil, fmt.Errorf("target func %s is not found", name)
 }
 
-func RegisterTargetFunc(name string, fn func(context.Context, *net.IP, *JobTarget) error) error {
+func RegisterTargetFunc(name string, fn func(context.Context, *net.IP, *TargetConfig) error) error {
 	if fn, _ := TargetFunc(name); fn != nil {
 		return fmt.Errorf("target func %s is already registered", name)
 	}

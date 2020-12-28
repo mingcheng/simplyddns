@@ -24,7 +24,7 @@ func TestSourceStatic(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, fn)
 
-	ip, err := fn(context.TODO(), &simplyddns.JobSource{
+	ip, err := fn(context.TODO(), &simplyddns.SourceConfig{
 		Content: Address,
 	})
 

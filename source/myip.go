@@ -23,7 +23,7 @@ import (
 
 func init() {
 	const Name = "MyIPIP.net"
-	fn := func(ctx context.Context, _ *simplyddns.JobSource) (*net.IP, error) {
+	fn := func(ctx context.Context, _ *simplyddns.SourceConfig) (*net.IP, error) {
 		log.Debugf("%s start requests", Name)
 		resp, err := http.Get("https://myip.ipip.net/json")
 		if err != nil || resp.StatusCode != http.StatusOK {

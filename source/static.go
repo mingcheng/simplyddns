@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	fn := func(_ context.Context, source *ddns.JobSource) (*net.IP, error) {
+	fn := func(_ context.Context, source *ddns.SourceConfig) (*net.IP, error) {
 		addr := net.ParseIP(strings.TrimSpace(source.Content))
 		log.Debugf("parsed address is %s", addr.String())
 		return &addr, nil

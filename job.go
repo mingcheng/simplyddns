@@ -19,14 +19,14 @@ import (
 	"time"
 )
 
-type JobSource struct {
+type SourceConfig struct {
 	Interval uint   `yaml:"interval,omitempty"`
 	Type     string `yaml:"type,omitempty"`
 	Path     string `yaml:"path"`
 	Content  string `yaml:"content"`
 }
 
-type JobTarget struct {
+type TargetConfig struct {
 	Type    string   `yaml:"type,omitempty"`
 	Key     string   `yaml:"key,omitempty"`
 	Token   string   `yaml:"token"`
@@ -35,15 +35,15 @@ type JobTarget struct {
 }
 
 type JobConfig struct {
-	WebHook string    `yaml:"webhook" mapstructure:"webhook"`
-	Source  JobSource `yaml:"source,omitempty" mapstructure:"source"`
-	Target  JobTarget `yaml:"target,omitempty" mapstructure:"target"`
+	WebHook string       `yaml:"webhook" mapstructure:"webhook"`
+	Source  SourceConfig `yaml:"source,omitempty" mapstructure:"source"`
+	Target  TargetConfig `yaml:"target,omitempty" mapstructure:"target"`
 }
 
 type Job struct {
 	Config     *JobConfig
-	SourceFunc func(context.Context, *JobSource) (*net.IP, error)
-	TargetFunc func(context.Context, *net.IP, *JobTarget) error
+	SourceFunc func(context.Context, *SourceConfig) (*net.IP, error)
+	TargetFunc func(context.Context, *net.IP, *TargetConfig) error
 	ticker     *time.Ticker
 	done       chan bool
 	lastIP     *net.IP
