@@ -3,7 +3,7 @@
  * Author: Ming Cheng<mingcheng@outlook.com>
  *
  * Created Date: Friday, December 25th 2020, 10:45:54 pm
- * Last Modified: Sunday, December 27th 2020, 7:38:30 pm
+ * Last Modified: Monday, December 28th 2020, 9:31:27 am
  *
  * http://www.opensource.org/licenses/MIT
  */
@@ -18,8 +18,6 @@ import (
 	"strings"
 	"time"
 )
-
-const DefaultSourceInterval = 5
 
 type JobSource struct {
 	Interval uint   `yaml:"interval,omitempty"`
@@ -52,61 +50,78 @@ type Job struct {
 }
 
 // RunWebhook to run the webhook when ip address has updated
-func (j *Job) RunWebhook(ip *net.IP, e error, domains []string) error {
-	if j.Config.WebHook != "" {
-
-		client := &http.Client{
-			Timeout: 30 * time.Second,
-		}
-
-		req, err := http.NewRequest("GET", j.Config.WebHook, nil)
-		if err != nil {
-			return err
-		}
-
-		req.Header.Add("DDNS-New-Address", ip.String())
-		req.Header.Add("DDNS-Domains", strings.Join(domains, ","))
-		if e != nil {
-			req.Header.Add("DDNS-Error", e.Error())
-		}
-
-		if _, err := client.Do(req); err != nil {
-			return err
-		}
-
-		return nil
+func (j *Job) RunWebhook(ctx context.Context, ip *net.IP, e error, domains []string) error {
+	if j.Config.WebHook == "" {
+		return fmt.Errorf("webhook address is nil")
 	}
 
-	return fmt.Errorf("webhook address is nil")
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	webhookUrl := j.Config.WebHook
+
+	req, err := http.NewRequest("GET", webhookUrl, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Add("DDNS-New-Address", ip.String())
+	req.Header.Add("DDNS-Domains", strings.Join(domains, ","))
+	if e != nil {
+		req.Header.Add("DDNS-Error", e.Error())
+	}
+	req.WithContext(ctx)
+
+	if resp, err := client.Do(req); err != nil {
+		log.Debug(err)
+		return err
+	} else {
+		log.Infof("run webhook %s is finished, status code is %v", webhookUrl, resp.StatusCode)
+	}
+
+	return nil
 }
 
+// Start to start a job
 func (j *Job) Start(ctx context.Context) {
+	var (
+		err    error
+		addr   *net.IP
+		config = j.Config
+	)
+
 	go func() {
 		for ; true; <-j.ticker.C {
-			addr, err := j.SourceFunc(ctx, &j.Config.Source)
-			log.Debugf("get adress from %v source func is %v", j.Config.Source.Type, addr.String())
-
-			// cache addr
-			if err != nil {
+			if addr, err = j.SourceFunc(ctx, &config.Source); err != nil {
 				log.Error(err)
 				continue
 			}
 
+			// markup the source func result
+			log.Debugf("get address from source fun %s, value is %s", config.Source.Type, addr.String())
+
 			// ignore the same ip address
 			if j.lastIP != nil && j.lastIP.Equal(*addr) {
-				log.Infof("ignore the same cached address %s", addr.String())
+				log.Warnf("ignore the cached address %s", addr.String())
 				continue
 			}
 
-			err = j.TargetFunc(ctx, addr, &j.Config.Target)
-			log.Debug(err)
+			// run the target func
+			if err = j.TargetFunc(ctx, addr, &j.Config.Target); err != nil {
+				log.Warn(err)
+			} else {
+				// cache the new ip address
+				j.lastIP = addr
+			}
 
-			// cache the new ip address
-			j.lastIP = addr
-
-			// trigger the webhook
-			log.Infof("start run webhook, %s %v %v", addr.String(), err, j.Config.Target.Domains)
-			_ = j.RunWebhook(addr, err, j.Config.Target.Domains)
+			// trigger the webhook, whatever target func is fail
+			if config.WebHook != "" {
+				log.Infof("start run webhook %s, %s %v %v", config.WebHook, addr.String(), err, config.Target.Domains)
+				go j.RunWebhook(ctx, addr, err, config.Target.Domains)
+			} else {
+				log.Warn("webhook config is empty, so ignore")
+			}
 		}
 	}()
 
@@ -117,6 +132,7 @@ func (j *Job) Start(ctx context.Context) {
 	}
 }
 
+// Stop to stop a job
 func (j *Job) Stop() {
 	log.Debug("stopping job")
 	j.done <- true
