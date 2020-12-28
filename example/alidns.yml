@@ -1,14 +1,14 @@
 ###
-# File: namedotcom.yml
+# File: alidns.yml
 # Author: Ming Cheng<mingcheng@outlook.com>
 #
 # Created Date: Friday, December 25th 2020, 9:24:08 pm
-# Last Modified: Monday, December 28th 2020, 2:54:27 pm
+# Last Modified: Sunday, December 27th 2020, 8:38:03 pm
 #
 # http://www.opensource.org/licenses/MIT
 ###
 
-logfile: "/var/log/simplyddns.log"
+logfile: "/dev/stderr"
 debug: Yes
 
 ddns:
@@ -16,9 +16,9 @@ ddns:
       type: "myipip"
       interval: 3600
     target:
-      type: namedotcom
+      type: alidns
       key: "<your-key>"
       token: "<your-token>"
-      #proxy: "<you-proxy-address:port>"
       domains:
-        - sub.example.com
+        - 1.example.com
+        - 2.example.com

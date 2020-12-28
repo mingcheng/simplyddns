@@ -82,6 +82,10 @@ _sleep_
 
 啥都不干，就是 Sleep 暂停几秒，可以作为测试使用。
 
+_alidns_
+
+使用阿里云 DNS 服务的接口，需要后台先申请 API 的 Key 和 Token。详细使用方式在 `target/alidns_test.go` 文件中，配置文件例子在 `example/alidns.yml` 中。
+
 _namedotcom_
 
 使用 Name.com 作为域名服务的后端。因为 Name.com 有白名单验证，所以如果不是本机访问可以考虑使用代理的方式请求（具体请参见 `target/namedotcom_test.go` 这个文件）。
