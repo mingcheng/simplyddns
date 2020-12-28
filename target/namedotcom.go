@@ -103,7 +103,7 @@ func init() {
 	domainRecords := map[string]*namedotcom.Record{}
 
 	// NewNameCom for instance a new namedotcom client
-	NewNameCom := func(key, token string, config *ddns.JobTarget) (*NameCom, error) {
+	NewNameCom := func(key, token string, config *ddns.TargetConfig) (*NameCom, error) {
 		instance := namedotcom.New(key, token)
 		if config.Proxy != "" {
 			if client, err := ddns.ProxyHttpClient(config.Proxy); client != nil {
@@ -121,7 +121,7 @@ func init() {
 		}, nil
 	}
 
-	target := func(ctx context.Context, addr *net.IP, config *ddns.JobTarget) error {
+	target := func(ctx context.Context, addr *net.IP, config *ddns.TargetConfig) error {
 		namecom, err := NewNameCom(config.Key, config.Token, config)
 		if err != nil {
 			return err

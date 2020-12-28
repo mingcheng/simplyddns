@@ -19,7 +19,7 @@ import (
 )
 
 func init() {
-	target := func(_ context.Context, addr *net.IP, _ *ddns.JobTarget) error {
+	target := func(_ context.Context, addr *net.IP, _ *ddns.TargetConfig) error {
 		log.Debugf("sleep target, recive address %s", addr.String())
 		time.Sleep(10 * time.Second)
 		return nil

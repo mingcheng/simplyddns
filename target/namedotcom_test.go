@@ -31,7 +31,7 @@ func TestTargetNameDotCom(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
-	go fn(ctx, &ip, &simplyddns.JobTarget{
+	go fn(ctx, &ip, &simplyddns.TargetConfig{
 		Key:     os.Getenv("NAME_COM_KEY"),
 		Token:   os.Getenv("NAME_COM_TOKEN"),
 		Proxy:   os.Getenv("NAME_COM_PROXY"),
