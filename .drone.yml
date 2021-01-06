@@ -3,7 +3,7 @@
 # Author: Ming Cheng<mingcheng@outlook.com>
 #
 # Created Date: Thursday, September 17th 2020, 7:16:54 pm
-# Last Modified: Wednesday, January 6th 2021, 8:35:39 pm
+# Last Modified: Wednesday, January 6th 2021, 8:44:53 pm
 #
 # http://www.opensource.org/licenses/MIT
 ###
@@ -16,15 +16,16 @@ steps:
   - name: test-and-build
     image: golang:1.15
     environment:
-      GOPROXY: "https://mirrors.aliyun.com/goproxy,https://goproxy.cn,direct"
+      GOPROXY: "https://goproxy.cn,direct"
     commands:
       - make test build
 
-  - name: build-image
+  - name: publish-docker-image
     image: plugins/docker
     environment:
       GITEA_TOKEN:
         from_secret: gitea_token
+      GOPROXY: "https://goproxy.cn,direct"
     when:
       branch: master
       event: push
@@ -41,4 +42,4 @@ steps:
       custom_dns: 119.29.29.29
       mirror: https://pqbap4ya.mirror.aliyuncs.com/
       tags:
-        - 0.0.1
+        - latest

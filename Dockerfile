@@ -3,7 +3,7 @@ LABEL maintainer="mingcheng<mingcheng@outlook.com>"
 
 ENV PACKAGE github.com/mingcheng/simplyddns
 ENV BUILD_DIR ${GOPATH}/src/${PACKAGE}
-ENV GOPROXY https://mirrors.cloud.tencent.com/go,https://goproxy.cn,https://goproxy.io,direct
+ENV GOPROXY https://mirrors.cloud.tencent.com/go,https://goproxy.cn,direct
 
 # Build
 COPY . ${BUILD_DIR}
