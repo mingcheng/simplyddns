@@ -1,3 +1,13 @@
+###
+# File: k8s-deploy.yml
+# Author: Ming Cheng<mingcheng@outlook.com>
+#
+# Created Date: Wednesday, January 6th 2021, 8:46:46 pm
+# Last Modified: Thursday, January 7th 2021, 8:19:31 pm
+#
+# http://www.opensource.org/licenses/MIT
+###
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -6,7 +16,6 @@ data:
   simplyddns.yml: |-
     logfile: "/dev/stderr"
     debug: Yes
-
     ddns:
       - source:
           type: "lo"
@@ -14,34 +23,27 @@ data:
         target:
           type: "sleep"
 ---
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Pod
 metadata:
-  name: simplyddns-deployment
+  name: simplyddns
+  labels:
+    app: simplyddns
 spec:
-  selector:
-    matchLabels:
-      app: simplyddns
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: simplyddns
-    spec:
-      containers:
-        - name: simplyddns
-          image: swr.cn-east-2.myhuaweicloud.com/mingcheng/simplyddns:latest
-          imagePullPolicy: IfNotPresent
-          env:
-            - name: TZ
-              value: "Asia/Shanghai"
-          volumeMounts:
-            - name: config
-              mountPath: /simplyddns.yml
-              subPath: simplyddns.yml
-              readOnly: true
-      restartPolicy: Always
-      volumes:
+  containers:
+    - name: simplyddns
+      image: swr.cn-east-2.myhuaweicloud.com/mingcheng/simplyddns:latest
+      imagePullPolicy: IfNotPresent
+      env:
+        - name: TZ
+          value: "Asia/Shanghai"
+      volumeMounts:
         - name: config
-          configMap:
-            name: simplyddns-config
+          mountPath: /simplyddns.yml
+          subPath: simplyddns.yml
+          readOnly: true
+  restartPolicy: Always
+  volumes:
+    - name: config
+      configMap:
+        name: simplyddns-config
