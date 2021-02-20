@@ -76,6 +76,10 @@ _myip_
 
 通过访问 ipip.net 得知访问的 IP 地址，推荐的获取 IP 地址方法之一，用于访问主机有公网地址并能直接访问的情况（如 DMZ 主机）。
 
+_ipsb_
+
+另外个能够通过访问对方 Web 地址的 IP 获取服务。
+
 #### target
 
 _sleep_
@@ -123,5 +127,18 @@ ddns:
 ```
 
 这样子配置后，只需要关心 target 也就是域名的配置即可。
+
+### WebHook 的配置
+
+WebHook 可以在任何配置更改的情况下通知到用户，可以参考使用以下的配置：
+
+```yaml
+webhook:
+  method: GET
+  url: https://<your-webhook-address>
+  timeout: 30
+```
+
+默认情况下 Method 为 GET，Timout 如果没有配置的话就是默认值。
 
 `- eof -`
