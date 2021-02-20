@@ -35,7 +35,7 @@ type TargetConfig struct {
 }
 
 type WebHook struct {
-	Method  string `yaml:"method,omitempty" default:"get" mapstructure:"method"`
+	Method  string `yaml:"method,omitempty" default:"GET" mapstructure:"method"`
 	Url     string `yaml:"url,omitempty" mapstructure:"url"`
 	Timeout uint   `yaml:"timeout" mapstructure:"timeout"`
 }
@@ -66,21 +66,18 @@ func (j *Job) RunWebhook(ctx context.Context, ip *net.IP, e error, domains []str
 	}
 
 	if webHook.Method == "" {
-		webHook.Method = "get"
+		webHook.Method = "GET"
 	}
 
 	log.Infof("set webhook request client method %s and url %s", webHook.Method, webHook.Url)
-	req, err := http.NewRequest(webHook.Method, webHook.Url, nil)
+	req, err := http.NewRequest(strings.ToUpper(webHook.Method), webHook.Url, nil)
 	if err != nil {
 		log.Warn(err.Error())
 		return err
 	}
 
-	req.Header.Add("DDNS-New-Address", ip.String())
-	req.Header.Add("DDNS-Domains", strings.Join(domains, ","))
-	if e != nil {
-		req.Header.Add("DDNS-Error", e.Error())
-	}
+	req.Header.Add("SimplyDDNS-Address", ip.String())
+	req.Header.Add("SimplyDDNS-Domains", strings.Join(domains, ","))
 	req.WithContext(ctx)
 
 	if resp, err := client.Do(req); err != nil {
@@ -117,12 +114,12 @@ func (j *Job) Start(ctx context.Context) {
 				continue
 			}
 
+			// cache the new ip address
+			j.lastIP = addr
+
 			// run the target func
 			if err = j.TargetFunc(ctx, addr, &j.Config.Target); err != nil {
 				log.Warn(err)
-			} else {
-				// cache the new ip address
-				j.lastIP = addr
 			}
 
 			if len(config.WebHook.Url) > 0 {
