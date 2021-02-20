@@ -13,6 +13,8 @@ package main
 import (
 	"context"
 	"os"
+	"os/signal"
+	"syscall"
 
 	ddns "github.com/mingcheng/simplyddns"
 	_ "github.com/mingcheng/simplyddns/source"
@@ -55,7 +57,7 @@ func main() {
 		log.SetLevel(logrus.DebugLevel)
 	}
 
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	dispatch, err := ddns.NewDispatch(configure.Jobs)
@@ -63,10 +65,15 @@ func main() {
 		log.Panic(err)
 	}
 
-	//go func() {
-	//	time.Sleep(10 * time.Second)
-	//	dispatch.Stop()
-	//}()
+	// waiting for stop
+	go func() {
+		interrupt := make(chan os.Signal, 1)
+		signal.Notify(interrupt, os.Kill, os.Interrupt, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM)
+		<-interrupt
+
+		log.Debugf("stop disaptch")
+		dispatch.Stop()
+	}()
 
 	log.Debugf("start dispatch")
 	dispatch.Start(ctx)

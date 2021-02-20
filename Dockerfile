@@ -1,9 +1,9 @@
-FROM golang:1.15 AS builder
+FROM golang:1.16 AS builder
 LABEL maintainer="mingcheng<mingcheng@outlook.com>"
 
 ENV PACKAGE github.com/mingcheng/simplyddns
 ENV BUILD_DIR ${GOPATH}/src/${PACKAGE}
-ENV GOPROXY https://mirrors.cloud.tencent.com/go,https://goproxy.cn,direct
+ENV GOPROXY https://goproxy.cn,direct
 
 # Build
 COPY . ${BUILD_DIR}
@@ -21,7 +21,7 @@ RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.li
 	&& echo "Asia/Shanghai" > /etc/timezone \
 	&& apt -y update \
 	&& apt -y upgrade \
-	&& apt -y install ca-certificates openssl tzdata \
+	&& apt -y install ca-certificates openssl tzdata curl \
 	&& apt -y autoremove
 
 COPY --from=builder /bin/simplyddns /bin/simplyddns

@@ -34,8 +34,14 @@ type TargetConfig struct {
 	Domains []string `yaml:"domains,omitempty"`
 }
 
+type WebHook struct {
+	Method  string `yaml:"method,omitempty" default:"get" mapstructure:"method"`
+	Url     string `yaml:"url,omitempty" mapstructure:"url"`
+	Timeout uint   `yaml:"timeout" mapstructure:"timeout"`
+}
+
 type JobConfig struct {
-	WebHook string       `yaml:"webhook" mapstructure:"webhook"`
+	WebHook WebHook      `yaml:"webhook" mapstructure:"webhook"`
 	Source  SourceConfig `yaml:"source,omitempty" mapstructure:"source"`
 	Target  TargetConfig `yaml:"target,omitempty" mapstructure:"target"`
 }
@@ -51,18 +57,22 @@ type Job struct {
 
 // RunWebhook to run the webhook when ip address has updated
 func (j *Job) RunWebhook(ctx context.Context, ip *net.IP, e error, domains []string) error {
-	if j.Config.WebHook == "" {
-		return fmt.Errorf("webhook address is nil")
+	webHook := j.Config.WebHook
+	client := &http.Client{}
+
+	if webHook.Timeout > 0 {
+		log.Debugf("set http webhook client timeout %d", webHook.Timeout)
+		client.Timeout = time.Duration(webHook.Timeout) * time.Second
 	}
 
-	client := &http.Client{
-		Timeout: 30 * time.Second,
+	if webHook.Method == "" {
+		webHook.Method = "get"
 	}
 
-	webhookUrl := j.Config.WebHook
-
-	req, err := http.NewRequest("GET", webhookUrl, nil)
+	log.Infof("set webhook request client method %s and url %s", webHook.Method, webHook.Url)
+	req, err := http.NewRequest(webHook.Method, webHook.Url, nil)
 	if err != nil {
+		log.Warn(err.Error())
 		return err
 	}
 
@@ -77,7 +87,7 @@ func (j *Job) RunWebhook(ctx context.Context, ip *net.IP, e error, domains []str
 		log.Debug(err)
 		return err
 	} else {
-		log.Infof("run webhook %s is finished, status code is %v", webhookUrl, resp.StatusCode)
+		log.Infof("run webhook %s is finished, status code is %v", webHook.Url, resp.StatusCode)
 	}
 
 	return nil
@@ -115,12 +125,10 @@ func (j *Job) Start(ctx context.Context) {
 				j.lastIP = addr
 			}
 
-			// trigger the webhook, whatever target func is fail
-			if config.WebHook != "" {
-				log.Infof("start run webhook %s, %s %v %v", config.WebHook, addr.String(), err, config.Target.Domains)
+			if len(config.WebHook.Url) > 0 {
+				// trigger the webhook
+				log.Infof("start run webhook %s, with method %s", config.WebHook.Url, config.WebHook.Method)
 				go j.RunWebhook(ctx, addr, err, config.Target.Domains)
-			} else {
-				log.Warn("webhook config is empty, so ignore")
 			}
 		}
 	}()

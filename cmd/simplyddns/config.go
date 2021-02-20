@@ -18,8 +18,10 @@ import (
 
 func init() {
 	viper.SetConfigType("yaml")
-	//viper.AllowEmptyEnv(true)
+	// viper.AllowEmptyEnv(true)
 	viper.SetConfigName(fmt.Sprintf("%s.yml", AppName))
+
+	// lookup path
 	viper.AddConfigPath(fmt.Sprintf("/etc/%s", AppName))
 	viper.AddConfigPath(fmt.Sprintf("$HOME/.config/%s", AppName))
 	viper.AddConfigPath(".")

@@ -14,7 +14,7 @@ type: docker
 
 steps:
   - name: test-and-build
-    image: golang:1.15
+    image: golang:1.16
     environment:
       GOPROXY: "https://goproxy.cn,direct"
     commands:
@@ -43,3 +43,4 @@ steps:
       mirror: https://pqbap4ya.mirror.aliyuncs.com/
       tags:
         - latest
+        - 1.0.1

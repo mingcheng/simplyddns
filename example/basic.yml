@@ -17,3 +17,6 @@ ddns:
       interval: 60 # 1 minute
     target:
       type: "sleep"
+    webhook:
+      method: "get"
+      url: "https://www.taobao.com/"

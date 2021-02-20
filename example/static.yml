@@ -1,0 +1,24 @@
+###
+# File: alidns.yml
+# Author: Ming Cheng<mingcheng@outlook.com>
+#
+# Created Date: Friday, December 25th 2020, 9:24:08 pm
+# Last Modified: Thursday, January 14th 2021, 10:12:59 am
+#
+# http://www.opensource.org/licenses/MIT
+###
+
+logfile: "/dev/stderr"
+debug: Yes
+
+ddns:
+  - source:
+      type: "static"
+      content: "192.168.1.1"
+      interval: 3600
+    target:
+      type: alidns
+      key: "<your-key>"
+      token: "<your-token>"
+      domains:
+        - 1.example.com
