@@ -3,7 +3,7 @@
  * Author: Ming Cheng<mingcheng@outlook.com>
  *
  * Created Date: Friday, December 25th 2020, 10:45:54 pm
- * Last Modified: Monday, December 28th 2020, 9:31:27 am
+ * Last Modified: Monday, February 22nd 2021, 9:24:32 am
  *
  * http://www.opensource.org/licenses/MIT
  */
@@ -80,11 +80,8 @@ func (j *Job) RunWebhook(ctx context.Context, ip *net.IP, e error, domains []str
 	req.Header.Add("SimplyDDNS-Domains", strings.Join(domains, ","))
 	req.WithContext(ctx)
 
-	if resp, err := client.Do(req); err != nil {
-		log.Debug(err)
+	if _, err := client.Do(req); err != nil {
 		return err
-	} else {
-		log.Infof("run webhook %s is finished, status code is %v", webHook.Url, resp.StatusCode)
 	}
 
 	return nil
@@ -92,15 +89,22 @@ func (j *Job) RunWebhook(ctx context.Context, ip *net.IP, e error, domains []str
 
 // Start to start a job
 func (j *Job) Start(ctx context.Context) {
-	var (
-		err    error
-		addr   *net.IP
-		config = j.Config
-	)
-
 	go func() {
-		for ; true; <-j.ticker.C {
-			if addr, err = j.SourceFunc(ctx, &config.Source); err != nil {
+		var (
+			err  error
+			addr *net.IP
+			job  = j
+		)
+
+		for ; true; <-job.ticker.C {
+			var config = job.Config
+
+			if config == nil {
+				log.Warn("the job configure is nil, ignore")
+				continue
+			}
+
+			if addr, err = job.SourceFunc(ctx, &config.Source); err != nil || addr == nil || addr.String() == "" {
 				log.Error(err)
 				continue
 			}
@@ -109,23 +113,26 @@ func (j *Job) Start(ctx context.Context) {
 			log.Debugf("get address from source fun %s, value is %s", config.Source.Type, addr.String())
 
 			// ignore the same ip address
-			if j.lastIP != nil && j.lastIP.Equal(*addr) {
+			if job.lastIP != nil && job.lastIP.Equal(*addr) {
 				log.Warnf("ignore the cached address %s", addr.String())
 				continue
 			}
 
-			// cache the new ip address
-			j.lastIP = addr
+			// cache the last ip address
+			job.lastIP = addr
 
 			// run the target func
-			if err = j.TargetFunc(ctx, addr, &j.Config.Target); err != nil {
+			if err = job.TargetFunc(ctx, addr, &job.Config.Target); err != nil {
 				log.Warn(err)
 			}
 
+			// trigger the webhook
 			if len(config.WebHook.Url) > 0 {
-				// trigger the webhook
-				log.Infof("start run webhook %s, with method %s", config.WebHook.Url, config.WebHook.Method)
-				go j.RunWebhook(ctx, addr, err, config.Target.Domains)
+				if err = job.RunWebhook(ctx, addr, err, config.Target.Domains); err != nil {
+					log.Warnf("run webhook with error %s", err.Error())
+				} else {
+					log.Infof("run webhook %s is finished", config.WebHook.Url)
+				}
 			}
 		}
 	}()
@@ -133,6 +140,7 @@ func (j *Job) Start(ctx context.Context) {
 	select {
 	case <-j.done:
 	case <-ctx.Done():
+		j.ticker.Stop()
 		return
 	}
 }
@@ -141,7 +149,6 @@ func (j *Job) Start(ctx context.Context) {
 func (j *Job) Stop() {
 	log.Debug("stopping job")
 	j.done <- true
-	j.ticker.Stop()
 }
 
 // NewJob for instance a new ddns job
