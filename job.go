@@ -118,13 +118,14 @@ func (j *Job) Start(ctx context.Context) {
 				continue
 			}
 
-			// cache the last ip address
-			job.lastIP = addr
-
 			// run the target func
 			if err = job.TargetFunc(ctx, addr, &job.Config.Target); err != nil {
 				log.Warn(err)
+				continue
 			}
+
+			// cache the last ip address
+			job.lastIP = addr
 
 			// trigger the webhook
 			if len(config.WebHook.Url) > 0 {

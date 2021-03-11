@@ -1,6 +1,6 @@
 .PHONY: build clean test test-race
 
-VERSION=1.0.3
+VERSION=1.0.4
 BIN=simplyddns
 DIR_SRC=./cmd/simplyddns
 DOCKER_CMD=docker
