@@ -99,11 +99,13 @@ func (j *Job) Start(ctx context.Context) {
 		for ; true; <-job.ticker.C {
 			var config = job.Config
 
-			if config == nil {
-				log.Warn("the job configure is nil, ignore")
+			// check configure
+			if err = ValidateConfig(config); err != nil {
+				log.Errorf("validate job configure is fail, %v", err)
 				continue
 			}
 
+			// run source function
 			if addr, err = job.SourceFunc(ctx, &config.Source); err != nil || addr == nil || addr.String() == "" {
 				log.Error(err)
 				continue
@@ -118,6 +120,14 @@ func (j *Job) Start(ctx context.Context) {
 				continue
 			}
 
+			domains := config.Target.Domains
+			if len(domains) > 0 {
+				if err = ValidateRecords(domains, addr); err == nil {
+					log.Errorf("valdate dns record without error, maybe already setted %s", addr.String())
+					continue
+				}
+			}
+
 			// run the target func
 			if err = job.TargetFunc(ctx, addr, &job.Config.Target); err != nil {
 				log.Warn(err)
@@ -129,7 +139,7 @@ func (j *Job) Start(ctx context.Context) {
 
 			// trigger the webhook
 			if len(config.WebHook.Url) > 0 {
-				if err = job.RunWebhook(ctx, addr, err, config.Target.Domains); err != nil {
+				if err = job.RunWebhook(ctx, addr, err, domains); err != nil {
 					log.Warnf("run webhook with error %s", err.Error())
 				} else {
 					log.Infof("run webhook %s is finished", config.WebHook.Url)
