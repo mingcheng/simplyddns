@@ -32,6 +32,7 @@ var (
 var (
 	configure ddns.Config
 	log       = ddns.NewLogger()
+	interrupt = make(chan os.Signal)
 )
 
 func init() {
@@ -67,7 +68,6 @@ func main() {
 
 	// waiting for stop
 	go func() {
-		interrupt := make(chan os.Signal, 1)
 		signal.Notify(interrupt, os.Kill, os.Interrupt, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM)
 		<-interrupt
 

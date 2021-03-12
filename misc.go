@@ -12,6 +12,7 @@ package simplyddns
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 
 	tld "github.com/jpillora/go-tld"
@@ -68,4 +69,55 @@ func NewLogger() *logrus.Logger {
 
 func init() {
 	log = NewLogger()
+}
+
+// ValidateRecords 批量验证 DNS 域名是否已经是对应的 IP 地址
+func ValidateRecords(domains []string, addr *net.IP) error {
+	for _, domain := range domains {
+		if _, err := ParseDomain(domain); err != nil {
+			return err
+		}
+		if err := ValidateRecord(domain, addr); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ValidateRecord 批量验证 DNS 域名是否已经是对应的 IP 地址
+func ValidateRecord(domain string, addr *net.IP) error {
+	found := false
+
+	if records, err := net.LookupIP(domain); err != nil {
+		return err
+	} else {
+		for _, record := range records {
+			if record.Equal(*addr) {
+				found = true
+			}
+		}
+
+		if found {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("domain %s is not found address %s", domain, addr.String())
+}
+
+// ValidateConfig 验证配置对象是否合适
+func ValidateConfig(config *JobConfig) error {
+	if config == nil {
+		return fmt.Errorf("configure is nil")
+	}
+
+	// check domain
+	for _, domain := range config.Target.Domains {
+		if _, err := ParseDomain(domain); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
