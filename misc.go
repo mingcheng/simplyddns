@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"sync"
 
 	tld "github.com/jpillora/go-tld"
 	"github.com/sirupsen/logrus"
@@ -57,19 +58,22 @@ func ParseDomain(domain string) (*tld.URL, error) {
 }
 
 // NewLogger to return logger instance
-var log *logrus.Logger
+var (
+	log  *logrus.Logger
+	once sync.Once
+)
 
 func NewLogger() *logrus.Logger {
-	if log == nil {
+	once.Do(func() {
 		log = logrus.New()
-	}
+	})
 
 	return log
 }
 
-func init() {
-	log = NewLogger()
-}
+// func init() {
+// 	log = NewLogger()
+// }
 
 // ValidateRecords 批量验证 DNS 域名是否已经是对应的 IP 地址
 func ValidateRecords(domains []string, addr *net.IP) error {

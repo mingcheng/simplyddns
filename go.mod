@@ -5,6 +5,7 @@ go 1.15
 require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.805
 	github.com/jpillora/go-tld v1.1.1
+	github.com/judwhite/go-svc v1.2.1
 	github.com/namedotcom/go v0.0.0-20180403034216-08470befbe04
 	github.com/sirupsen/logrus v1.2.0
 	github.com/spf13/viper v1.7.1
