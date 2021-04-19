@@ -11,15 +11,13 @@
 package main
 
 import (
-	"context"
 	"os"
-	"os/signal"
 	"syscall"
 
-	ddns "github.com/mingcheng/simplyddns"
+	"github.com/judwhite/go-svc"
+	"github.com/mingcheng/simplyddns"
 	_ "github.com/mingcheng/simplyddns/source"
 	_ "github.com/mingcheng/simplyddns/target"
-	"github.com/sirupsen/logrus"
 )
 
 const AppName = "simplyddns"
@@ -27,54 +25,16 @@ const AppName = "simplyddns"
 var (
 	BuildTime    = "unknown"
 	BuildVersion = "unknown"
+	log          = simplyddns.NewLogger()
 )
-
-var (
-	configure ddns.Config
-	log       = ddns.NewLogger()
-	interrupt = make(chan os.Signal)
-)
-
-func init() {
-	log.Printf("%s %s, %s", AppName, BuildVersion, BuildTime)
-}
 
 func main() {
-	if err := ReadConfigure(&configure); err != nil {
-		log.Panic(err)
+	prg := &Program{
+		Configure: &simplyddns.Config{},
 	}
 
-	if configure.LogFile != "" {
-		fp, err := os.OpenFile(configure.LogFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
-		if err != nil {
-			log.Panic(err)
-		}
-
-		log.Out = fp
-		defer fp.Close()
+	// Call svc.Run to start your Program/service.
+	if err := svc.Run(prg, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill); err != nil {
+		log.Fatal(err)
 	}
-
-	if configure.Debug {
-		log.SetLevel(logrus.DebugLevel)
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	dispatch, err := ddns.NewDispatch(configure.Jobs)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	// waiting for stop
-	go func() {
-		signal.Notify(interrupt, os.Kill, os.Interrupt, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM)
-		<-interrupt
-
-		log.Debugf("stop disaptch")
-		dispatch.Stop()
-	}()
-
-	log.Debugf("start dispatch")
-	dispatch.Start(ctx)
 }
