@@ -1,7 +1,11 @@
 version: "3"
 services:
   simplyddns:
-    build: .
+    build:
+      context: .
+      args:
+        GITEA_TOKEN: $GITEA_TOKEN
+    image: swr.cn-east-2.myhuaweicloud.com/mingcheng/simplyddns:1.1.1
     restart: unless-stopped
     environment:
       TZ: "Asia/Shanghai"
