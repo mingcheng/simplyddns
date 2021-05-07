@@ -17,6 +17,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	notify "repo.wooramel.cn/mingcheng/srk-notification"
 )
 
 type SourceConfig struct {
@@ -40,10 +42,20 @@ type WebHook struct {
 	Timeout uint   `yaml:"timeout" mapstructure:"timeout"`
 }
 
+type Notification struct {
+	Type     string `yaml:"type,omitempty"  default:"bark"  mapstructure:"type"`
+	Addr     string `yaml:"addr,omitempty" mapstructure:"addr"`
+	Topic    string `yaml:"topic,omitempty" mapstructure:"topic"`
+	Receiver string `yaml:"receiver" mapstructure:"receiver"`
+	Subject  string `yaml:"subject,omitempty" mapstructure:"subject"`
+	Content  string `yaml:"content,omitempty" mapstructure:"content"`
+}
+
 type JobConfig struct {
-	WebHook WebHook      `yaml:"webhook" mapstructure:"webhook"`
-	Source  SourceConfig `yaml:"source,omitempty" mapstructure:"source"`
-	Target  TargetConfig `yaml:"target,omitempty" mapstructure:"target"`
+	WebHook      WebHook      `yaml:"webhook" mapstructure:"webhook"`
+	Notification Notification `yaml:"notify" mapstructure:"notify"`
+	Source       SourceConfig `yaml:"source,omitempty" mapstructure:"source"`
+	Target       TargetConfig `yaml:"target,omitempty" mapstructure:"target"`
 }
 
 type Job struct {
@@ -56,7 +68,7 @@ type Job struct {
 }
 
 // RunWebhook to run the webhook when ip address has updated
-func (j *Job) RunWebhook(ctx context.Context, ip *net.IP, e error, domains []string) error {
+func (j *Job) RunWebhook(ctx context.Context, ip *net.IP, _ error, domains []string) error {
 	webHook := j.Config.WebHook
 	client := &http.Client{}
 
@@ -137,12 +149,36 @@ func (j *Job) Start(ctx context.Context) {
 			// cache the last ip address
 			job.lastIP = addr
 
-			// trigger the webhook
+			// trigger the webhook if configured
 			if len(config.WebHook.Url) > 0 {
 				if err = job.RunWebhook(ctx, addr, err, domains); err != nil {
 					log.Warnf("run webhook with error %s", err.Error())
 				} else {
 					log.Infof("run webhook %s is finished", config.WebHook.Url)
+				}
+			}
+
+			// if notification center is configured
+			if len(config.Notification.Addr) > 0 {
+				cfg := config.Notification
+
+				log.Debugf("notification config %v", cfg)
+
+				notification, err := notify.NewSender(cfg.Addr, cfg.Topic)
+				if err != nil {
+					log.Error(err)
+					return
+				}
+
+				err = notification.Send(notify.Message{
+					Type:     cfg.Type,
+					Receiver: cfg.Receiver,
+					Subject:  cfg.Subject,
+					Content:  cfg.Content,
+				})
+
+				if err != nil {
+					log.Error(err)
 				}
 			}
 		}

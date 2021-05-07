@@ -17,6 +17,8 @@ steps:
     image: golang:1.16
     environment:
       GOPROXY: "https://goproxy.cn,direct"
+      GITEA_TOKEN:
+        from_secret: gitea_token
     commands:
       - make test build
 
@@ -43,4 +45,4 @@ steps:
 #      mirror: https://pqbap4ya.mirror.aliyuncs.com/
       tags:
         - latest
-        - 1.1.0
+        - 1.1.1

@@ -1,6 +1,9 @@
 FROM golang:1.16 AS builder
 LABEL maintainer="mingcheng<mingcheng@outlook.com>"
 
+ARG GITEA_TOKEN
+ENV GITEA_TOKEN ${GITEA_TOKEN}
+
 ENV PACKAGE github.com/mingcheng/simplyddns
 ENV BUILD_DIR ${GOPATH}/src/${PACKAGE}
 ENV GOPROXY https://goproxy.cn,direct
@@ -8,7 +11,8 @@ ENV GOPROXY https://goproxy.cn,direct
 # Build
 COPY . ${BUILD_DIR}
 WORKDIR ${BUILD_DIR}
-RUN make clean build \
+RUN git config --global url."https://${GITEA_TOKEN}@repo.wooramel.cn/".insteadOf "https://repo.wooramel.cn/" \
+ 	&& make clean build \
 	&& mv ./simplyddns /bin/simplyddns \
 	&& cp ./example/basic.yml /simplyddns.yml
 
