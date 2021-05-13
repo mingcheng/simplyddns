@@ -164,13 +164,13 @@ func (j *Job) Start(ctx context.Context) {
 				cfg := config.Notification
 
 				log.Debugf("notification config %v", cfg)
-				var notification notify.SenderCmd
-				if cfg.MQ == "nsq" {
-					notification, err = notify.NewNSQSender(notify.NSQConfig{
-						Host:  cfg.Addr,
-						Topic: cfg.Addr,
-					})
-				} else {
+				notification, err := notify.NewNSQSender(notify.NSQConfig{
+					Host:  cfg.Addr,
+					Topic: cfg.Addr,
+				})
+
+				if cfg.MQ == "amqp" {
+					log.Info("RabbitMQ is configured, so overwrite sender\n %v", cfg)
 					notification, err = notify.NewAMQPSender(notify.AMQPConfig{
 						Addr:     cfg.Addr,
 						Queue:    cfg.Topic,
