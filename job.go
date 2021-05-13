@@ -170,7 +170,7 @@ func (j *Job) Start(ctx context.Context) {
 				})
 
 				if cfg.MQ == "amqp" {
-					log.Info("RabbitMQ is configured, so overwrite sender\n %v", cfg)
+					log.Infof("RabbitMQ is configured, so overwrite sender\n %v", cfg)
 					notification, err = notify.NewAMQPSender(notify.AMQPConfig{
 						Addr:     cfg.Addr,
 						Queue:    cfg.Topic,
