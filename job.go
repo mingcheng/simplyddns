@@ -43,7 +43,8 @@ type WebHook struct {
 }
 
 type Notification struct {
-	Type     string `yaml:"type,omitempty"  default:"bark"  mapstructure:"type"`
+	MQ       string `yaml:"mq"  default:"nsq"  mapstructure:"type"`
+	Type     string `yaml:"type"  default:"bark"  mapstructure:"type"`
 	Addr     string `yaml:"addr,omitempty" mapstructure:"addr"`
 	Topic    string `yaml:"topic,omitempty" mapstructure:"topic"`
 	Receiver string `yaml:"receiver" mapstructure:"receiver"`
@@ -163,21 +164,32 @@ func (j *Job) Start(ctx context.Context) {
 				cfg := config.Notification
 
 				log.Debugf("notification config %v", cfg)
+				var notification notify.SenderCmd
+				if cfg.MQ == "nsq" {
+					notification, err = notify.NewNSQSender(notify.NSQConfig{
+						Host:  cfg.Addr,
+						Topic: cfg.Addr,
+					})
+				} else {
+					notification, err = notify.NewAMQPSender(notify.AMQPConfig{
+						Addr:     cfg.Addr,
+						Queue:    cfg.Topic,
+						Exchange: "",
+					})
+				}
 
-				notification, err := notify.NewSender(cfg.Addr, cfg.Topic)
 				if err != nil {
 					log.Error(err)
 					return
 				}
 
-				err = notification.Send(notify.Message{
+				log.Debug(notification)
+				if err = notification.Send(notify.Message{
 					Type:     cfg.Type,
 					Receiver: cfg.Receiver,
 					Subject:  cfg.Subject,
 					Content:  cfg.Content,
-				})
-
-				if err != nil {
+				}); err != nil {
 					log.Error(err)
 				}
 			}
