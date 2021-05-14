@@ -41,8 +41,8 @@ steps:
       build_args_from_env:
         - GITEA_TOKEN
       dockerfile: Dockerfile
-#      custom_dns: 119.29.29.29
-#      mirror: https://pqbap4ya.mirror.aliyuncs.com/
+        custom_dns: 119.29.29.29
+        mirror: https://pqbap4ya.mirror.aliyuncs.com/
       tags:
         - latest
         - 1.2.0

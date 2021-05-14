@@ -43,8 +43,8 @@ type WebHook struct {
 }
 
 type Notification struct {
-	MQ       string `yaml:"mq"  default:"nsq"  mapstructure:"type"`
-	Type     string `yaml:"type"  default:"bark"  mapstructure:"type"`
+	MQ       string `yaml:"mq" default:"nsq" mapstructure:"mq"`
+	Type     string `yaml:"type" default:"bark" mapstructure:"type"`
 	Addr     string `yaml:"addr,omitempty" mapstructure:"addr"`
 	Topic    string `yaml:"topic,omitempty" mapstructure:"topic"`
 	Receiver string `yaml:"receiver" mapstructure:"receiver"`
@@ -164,18 +164,27 @@ func (j *Job) Start(ctx context.Context) {
 				cfg := config.Notification
 
 				log.Debugf("notification config %v", cfg)
-				notification, err := notify.NewNSQSender(notify.NSQConfig{
-					Host:  cfg.Addr,
-					Topic: cfg.Addr,
-				})
+				var (
+					notification notify.SenderCmd
+					err          error
+				)
 
-				if cfg.MQ == "amqp" {
-					log.Infof("RabbitMQ is configured, so overwrite sender\n %v", cfg)
-					notification, err = notify.NewAMQPSender(notify.AMQPConfig{
-						Addr:     cfg.Addr,
-						Queue:    cfg.Topic,
-						Exchange: "",
+				switch strings.ToLower(cfg.MQ) {
+				case "nsq":
+					log.Debug("NSQ is configured")
+					notification, err = notify.NewNSQSender(notify.NSQConfig{
+						Host:  cfg.Addr,
+						Topic: cfg.Addr,
 					})
+				case "amqp":
+					log.Debug("RabbitMQ is configured")
+					notification, err = notify.NewAMQPSender(notify.AMQPConfig{
+						Addr:  cfg.Addr,
+						Queue: cfg.Topic,
+					})
+				default:
+					log.Errorf("not support MQ type %v", cfg.MQ)
+					return
 				}
 
 				if err != nil {
@@ -191,6 +200,8 @@ func (j *Job) Start(ctx context.Context) {
 					Content:  cfg.Content,
 				}); err != nil {
 					log.Error(err)
+				} else {
+					log.Info("notify message has been sent")
 				}
 			}
 		}
