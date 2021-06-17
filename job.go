@@ -174,7 +174,7 @@ func (j *Job) Start(ctx context.Context) {
 					log.Debug("NSQ is configured")
 					notification, err = notify.NewNSQSender(notify.NSQConfig{
 						Host:  cfg.Addr,
-						Topic: cfg.Addr,
+						Topic: cfg.Topic,
 					})
 				case "amqp":
 					log.Debug("RabbitMQ is configured")
@@ -193,12 +193,14 @@ func (j *Job) Start(ctx context.Context) {
 				}
 
 				log.Debug(notification)
-				if err = notification.Send(notify.Message{
+				err = notification.Send(notify.Message{
 					Type:     cfg.Type,
 					Receiver: cfg.Receiver,
 					Subject:  cfg.Subject,
 					Content:  cfg.Content,
-				}); err != nil {
+				})
+
+				if err != nil {
 					log.Error(err)
 				} else {
 					log.Info("notify message has been sent")
