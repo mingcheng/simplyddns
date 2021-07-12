@@ -3,7 +3,7 @@
 # Author: Ming Cheng<mingcheng@outlook.com>
 #
 # Created Date: Thursday, September 17th 2020, 7:16:54 pm
-# Last Modified: Monday, July 12th 2021, 2:37:44 pm
+# Last Modified: Monday, July 12th 2021, 2:46:11 pm
 #
 # http://www.opensource.org/licenses/MIT
 ###
@@ -37,7 +37,6 @@ steps:
     when:
       branch:
         - master
-        - develop
       event:
         - push
     settings:
@@ -58,9 +57,6 @@ steps:
 
   - name: publish-arm64-image
     image: thegeeklab/drone-docker-buildx
-    volumes:
-      - name: docker-sock
-        path: /var/run/docker.sock
     environment:
       GITEA_TOKEN:
         from_secret: gitea_token
@@ -72,7 +68,6 @@ steps:
         - push
     settings:
       registry: quay.io
-      privileged: true
       repo: quay.io/mingcheng/simplyddns
       platforms: linux/arm64/v8
       username:
