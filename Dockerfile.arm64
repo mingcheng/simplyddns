@@ -14,7 +14,7 @@ COPY . ${BUILD_DIR}
 WORKDIR ${BUILD_DIR}
 RUN git config --global url."https://${GITEA_TOKEN}@repo.wooramel.cn/".insteadOf "https://repo.wooramel.cn/" \
  	&& make clean build \
-	&& mv ./simplyddns /usr/bin/simplyddns \
+	&& cp ./simplyddns /bin/simplyddns \
 	&& cp ./example/basic.yml /etc/simplyddns.yml
 
 # Stage2
@@ -29,7 +29,7 @@ RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.li
 	&& apt -y install ca-certificates openssl tzdata curl \
 	&& apt -y autoremove
 
-COPY --from=builder /usr/bin/simplyddns /user/bin/simplyddns
+COPY --from=builder /bin/simplyddns /bin/simplyddns
 COPY --from=builder /etc/simplyddns.yml /etc/simplyddns.yml
 
 ENTRYPOINT ["/bin/simplyddns"]
