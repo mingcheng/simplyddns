@@ -3,7 +3,7 @@
 # Author: Ming Cheng<mingcheng@outlook.com>
 #
 # Created Date: Thursday, September 17th 2020, 7:16:54 pm
-# Last Modified: Monday, July 12th 2021, 2:34:22 pm
+# Last Modified: Monday, July 12th 2021, 2:37:44 pm
 #
 # http://www.opensource.org/licenses/MIT
 ###
@@ -19,6 +19,7 @@ steps:
       GOPROXY: "https://goproxy.cn,direct"
       GITEA_TOKEN:
         from_secret: gitea_token
+      NSQ_ADDR: "192.168.1.200:4150"
     commands:
       - env
       - git config --global url."https://$GITEA_TOKEN@repo.wooramel.cn/".insteadOf "https://repo.wooramel.cn/"

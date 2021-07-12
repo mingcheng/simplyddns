@@ -1,6 +1,8 @@
 package simplyddns
 
 import (
+	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -9,8 +11,14 @@ import (
 )
 
 func TestNewNSQSender(t *testing.T) {
+	nsqAddr, ok := os.LookupEnv("NSQ_ADDR")
+	if !ok {
+		fmt.Println("NSQ_ADDR is not set, so ignore")
+		return
+	}
+
 	notification, err := notify.NewNSQSender(notify.NSQConfig{
-		Host:  "172.16.1.70:4150",
+		Host:  nsqAddr,
 		Topic: "srk-notification",
 	})
 	assert.NoError(t, err)
