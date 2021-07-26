@@ -22,6 +22,10 @@ import (
 )
 
 func TestNewAliDNS(t *testing.T) {
+	if _, exists := os.LookupEnv("ALIYUN_DNS_TOKEN"); !exists {
+		return
+	}
+
 	var err error
 
 	source, err := simplyddns.SourceFunc("myipip")
