@@ -52,7 +52,7 @@ steps:
       mirror: https://pqbap4ya.mirror.aliyuncs.com/
       tags:
         - latest
-        - 1.4.1
+        - 1.2.0
 
   - name: publish-arm64-image
     image: thegeeklab/drone-docker-buildx
@@ -81,7 +81,7 @@ steps:
       dockerfile: Dockerfile.arm64
       tags:
         - latest
-        - 1.4.1
+        - 1.2.0
 
 volumes:
   - name: docker-sock
