@@ -6,7 +6,7 @@ services:
       context: .
       args:
         GITEA_TOKEN: ${GITEA_TOKEN}
-    image: swr.cn-east-2.myhuaweicloud.com/mingcheng/simplyddns
+    image: ghcr.io/mingcheng/simplyddns
     restart: unless-stopped
     environment:
       TZ: "Asia/Shanghai"

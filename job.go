@@ -3,7 +3,7 @@
  * Author: Ming Cheng<mingcheng@outlook.com>
  *
  * Created Date: Friday, December 25th 2020, 10:45:54 pm
- * Last Modified: Monday, February 22nd 2021, 9:24:32 am
+ * Last Modified: Friday, August 27th 2021, 9:32:31 am
  *
  * http://www.opensource.org/licenses/MIT
  */
@@ -43,13 +43,15 @@ type WebHook struct {
 }
 
 type Notification struct {
-	MQ       string `yaml:"mq" default:"nsq" mapstructure:"mq"`
-	Type     string `yaml:"type" default:"bark" mapstructure:"type"`
-	Addr     string `yaml:"addr,omitempty" mapstructure:"addr"`
-	Topic    string `yaml:"topic,omitempty" mapstructure:"topic"`
-	Receiver string `yaml:"receiver" mapstructure:"receiver"`
-	Subject  string `yaml:"subject,omitempty" mapstructure:"subject"`
-	Content  string `yaml:"content,omitempty" mapstructure:"content"`
+	MQ         string `yaml:"mq" default:"nsq" mapstructure:"mq"`
+	Type       string `yaml:"type" default:"bark" mapstructure:"type"`
+	Addr       string `yaml:"addr,omitempty" mapstructure:"addr"`
+	Topic      string `yaml:"topic,omitempty" mapstructure:"topic"`
+	Exchange   string `yaml:"exchange,omitempty" mapstructure:"exchange"`
+	RoutingKey string `yaml:"routing_key,omitempty" mapstructure:"routing_key"`
+	Receiver   string `yaml:"receiver" mapstructure:"receiver"`
+	Subject    string `yaml:"subject,omitempty" mapstructure:"subject"`
+	Content    string `yaml:"content,omitempty" mapstructure:"content"`
 }
 
 type JobConfig struct {
@@ -179,8 +181,9 @@ func (j *Job) Start(ctx context.Context) {
 				case "amqp":
 					log.Debug("RabbitMQ is configured")
 					notification, err = notify.NewAMQPSender(notify.AMQPConfig{
-						Addr:  cfg.Addr,
-						Queue: cfg.Topic,
+						Addr:       cfg.Addr,
+						RoutingKey: cfg.RoutingKey,
+						Exchange:   cfg.Exchange,
 					})
 				default:
 					log.Errorf("not support MQ type %v", cfg.MQ)

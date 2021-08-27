@@ -33,3 +33,28 @@ func TestNewNSQSender(t *testing.T) {
 	})
 	assert.NoError(t, err)
 }
+
+func TestNewAMQPSender(t *testing.T) {
+	amqpAddr, ok := os.LookupEnv("AMQP_ADDR")
+	if !ok {
+		fmt.Println("AMQP_ADDR is not set, so ignore")
+		return
+	}
+
+	notification, err := notify.NewAMQPSender(notify.AMQPConfig{
+		Addr:       amqpAddr,
+		Exchange:   os.Getenv("AMQP_EXCHANGE"),
+		RoutingKey: os.Getenv("AMQP_ROUTING_KEY"),
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, notification)
+
+	err = notification.Send(notify.Message{
+		Type:      "sleep",
+		Timestamp: time.Now(),
+		Subject:   time.Now().String(),
+		Content:   time.Now().String(),
+		Receiver:  time.Now().String(),
+	})
+	assert.NoError(t, err)
+}

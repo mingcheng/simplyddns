@@ -19,11 +19,10 @@ steps:
       GOPROXY: "https://goproxy.cn,direct"
       GITEA_TOKEN:
         from_secret: gitea_token
-      NSQ_ADDR: "192.168.1.200:4150"
     commands:
       - env
       - git config --global url."https://$GITEA_TOKEN@repo.wooramel.cn/".insteadOf "https://repo.wooramel.cn/"
-      - make test
+      - make
 
   - name: publish-image
     image: plugins/docker
@@ -53,7 +52,7 @@ steps:
       mirror: https://pqbap4ya.mirror.aliyuncs.com/
       tags:
         - latest
-        - 1.4.0
+        - 1.4.1
 
   - name: publish-arm64-image
     image: thegeeklab/drone-docker-buildx
@@ -82,7 +81,7 @@ steps:
       dockerfile: Dockerfile.arm64
       tags:
         - latest
-        - 1.4.0
+        - 1.4.1
 
 volumes:
   - name: docker-sock

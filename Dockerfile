@@ -17,7 +17,7 @@ RUN git config --global url."https://${GITEA_TOKEN}@repo.wooramel.cn/".insteadOf
 	&& cp ./example/basic.yml /etc/simplyddns.yml
 
 # Stage2
-FROM debian:buster
+FROM debian:stable
 
 ENV TZ "Asia/Shanghai"
 RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list \
