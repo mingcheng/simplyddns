@@ -17,8 +17,10 @@ require (
 	github.com/valyala/fastjson v1.6.3
 	golang.org/x/net v0.0.0-20210614182718-04defd469f4e
 	golang.org/x/sys v0.0.0-20210616094352-59db8d763f22 // indirect
-	repo.wooramel.cn/mingcheng/srk-notification v0.0.0-20210521005617-7dc574f34041
+	repo.wooramel.cn/mingcheng/srk-notification v0.0.0-20210827040309-dbc75ee87b87
 	repo.wooramel.cn/mission/tools v0.0.0-20210406094928-04a6f4977b8b // indirect
 )
 
 replace github.com/namedotcom/go v0.0.0-20180403034216-08470befbe04 => github.com/mingcheng/namedotcom v0.0.0-20201225012315-7aca9c240303
+
+//replace repo.wooramel.cn/mingcheng/srk-notification v0.0.0-20210521005617-7dc574f34041 => ../srk-notification
