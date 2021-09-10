@@ -17,7 +17,7 @@ RUN git config --global url."https://${GITEA_TOKEN}@repo.wooramel.cn/".insteadOf
 	&& cp ./example/basic.yml /etc/simplyddns.yml
 
 # Stage2
-FROM debian:stable
+FROM debian:bullseye
 
 ENV TZ "Asia/Shanghai"
 RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list \
@@ -25,10 +25,10 @@ RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.li
 	&& echo "Asia/Shanghai" > /etc/timezone \
 	&& apt -y update \
 	&& apt -y upgrade \
-	&& apt -y install ca-certificates openssl tzdata curl \
+	&& apt -y install ca-certificates openssl tzdata curl dumb-init \
 	&& apt -y autoremove
 
 COPY --from=builder /bin/simplyddns /bin/simplyddns
 COPY --from=builder /etc/simplyddns.yml /etc/simplyddns.yml
 
-ENTRYPOINT ["/bin/simplyddns"]
+ENTRYPOINT ["dumb-init", "/bin/simplyddns"]
