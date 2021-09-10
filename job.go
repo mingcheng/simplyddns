@@ -63,7 +63,7 @@ type JobConfig struct {
 
 type Job struct {
 	Config     *JobConfig
-	SourceFunc func(context.Context, *SourceConfig) (*net.IP, error)
+	SourceFunc []func(context.Context, *SourceConfig) (*net.IP, error)
 	TargetFunc func(context.Context, *net.IP, *TargetConfig) error
 	ticker     *time.Ticker
 	done       chan bool
@@ -121,7 +121,7 @@ func (j *Job) Start(ctx context.Context) {
 			}
 
 			// run source function
-			if addr, err = job.SourceFunc(ctx, &config.Source); err != nil || addr == nil || addr.String() == "" {
+			if addr, err = job.Source(ctx, &config.Source); err != nil || addr == nil || addr.String() == "" {
 				log.Error(err)
 				continue
 			}
@@ -226,6 +226,40 @@ func (j *Job) Stop() {
 	j.done <- true
 }
 
+// Source to execute multi-source function
+func (j Job) Source(ctx context.Context, config *SourceConfig) (*net.IP, error) {
+	if j.SourceFunc == nil || len(j.SourceFunc) == 0 {
+		return nil, fmt.Errorf("source functions is empty")
+	}
+
+	var (
+		err      error
+		errTimes int
+		lastAddr *net.IP
+	)
+
+	for _, v := range j.SourceFunc {
+		var addr *net.IP
+		addr, err = v(ctx, config)
+		if err != nil {
+			log.Error(err, errTimes)
+			errTimes = errTimes + 1
+		}
+
+		if lastAddr != nil && !lastAddr.Equal(*addr) {
+			return nil, fmt.Errorf("fetch address is not the same, %v vs %v", lastAddr, addr)
+		}
+
+		lastAddr = addr
+	}
+
+	if errTimes > 0 && len(sourceFunc) > 3 && errTimes >= len(j.SourceFunc)/2 {
+		return nil, fmt.Errorf("max error times reached(%d), so the result is not right", errTimes)
+	}
+
+	return lastAddr, nil
+}
+
 // NewJob for instance a new ddns job
 func NewJob(config JobConfig) (*Job, error) {
 	// check the configure
@@ -237,9 +271,23 @@ func NewJob(config JobConfig) (*Job, error) {
 		return nil, fmt.Errorf("source check interval can not below zero or empty")
 	}
 
-	fnSource, err := SourceFunc(config.Source.Type)
-	if err != nil {
-		return nil, err
+	// split fn types as array
+	types := strings.Split(config.Source.Type, ",")
+	if len(types) == 0 {
+		return nil, fmt.Errorf("load source %s is empty", config.Source.Type)
+	}
+
+	// source funs is array
+	var sourceFuncs []func(context.Context, *SourceConfig) (*net.IP, error)
+
+	for _, v := range types {
+		fn, err := SourceFunc(strings.ToLower(v))
+		if err != nil {
+			return nil, err
+		}
+
+		// add func to source funcs
+		sourceFuncs = append(sourceFuncs, fn)
 	}
 
 	fnTarget, err := TargetFunc(config.Target.Type)
@@ -248,7 +296,7 @@ func NewJob(config JobConfig) (*Job, error) {
 	}
 
 	return &Job{
-		SourceFunc: fnSource,
+		SourceFunc: sourceFuncs,
 		TargetFunc: fnTarget,
 		Config:     &config,
 		ticker:     time.NewTicker(time.Second * time.Duration(config.Source.Interval)),

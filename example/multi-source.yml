@@ -1,0 +1,22 @@
+###
+# File: basic.yml
+# Author: Ming Cheng<mingcheng@outlook.com>
+#
+# Created Date: Friday, December 25th 2020, 9:24:08 pm
+# Last Modified: Monday, December 28th 2020, 2:54:22 pm
+#
+# http://www.opensource.org/licenses/MIT
+###
+
+logfile: "/dev/stderr"
+debug: Yes
+
+ddns:
+  - source:
+      type: ipify,myip,whatis
+      interval: 30 # sec
+    target:
+      type: "sleep"
+    webhook:
+      method: "get"
+      url: "https://www.taobao.com/"
