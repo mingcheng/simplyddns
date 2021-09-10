@@ -14,12 +14,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/mingcheng/simplyddns"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/mingcheng/simplyddns"
 )
 
-func TestSourceMyIPIP(t *testing.T) {
-	fn, err := simplyddns.SourceFunc("myipip")
+func TestSourceWhatIs(t *testing.T) {
+	fn, err := simplyddns.SourceFunc("whatis")
 	assert.NoError(t, err)
 
 	ip, err := fn(context.TODO(), nil)

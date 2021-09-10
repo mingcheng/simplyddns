@@ -52,36 +52,7 @@ steps:
       mirror: https://pqbap4ya.mirror.aliyuncs.com/
       tags:
         - latest
-        - 1.2.0
-
-  - name: publish-arm64-image
-    image: thegeeklab/drone-docker-buildx
-    volumes:
-      - name: docker-sock
-        path: /var/run/docker.sock
-    environment:
-      GITEA_TOKEN:
-        from_secret: gitea_token
-    when:
-      branch:
-        - master
-      event:
-        - push
-    settings:
-      registry: quay.io
-      privileged: true
-      repo: quay.io/mingcheng/simplyddns
-      platforms: linux/arm64/v8
-      username:
-        from_secret: quay_io_username
-      password:
-        from_secret: quay_io_password
-      build_args_from_env:
-        - GITEA_TOKEN
-      dockerfile: Dockerfile.arm64
-      tags:
-        - latest
-        - 1.2.0
+        - 1.2.1
 
 volumes:
   - name: docker-sock
