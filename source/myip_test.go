@@ -18,8 +18,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSourceMyIPIP(t *testing.T) {
-	fn, err := simplyddns.SourceFunc("myipip")
+func TestSourceMyIP(t *testing.T) {
+	fn, err := simplyddns.SourceFunc("myip")
 	assert.NoError(t, err)
 
 	ip, err := fn(context.TODO(), nil)

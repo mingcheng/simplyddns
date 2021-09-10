@@ -22,10 +22,11 @@ import (
 )
 
 func init() {
-	const Name = "MyIPIP.net"
+	// https://www.myip.com/api-docs/
+	const Name = "myip.com"
 	fn := func(ctx context.Context, _ *simplyddns.SourceConfig) (*net.IP, error) {
 		log.Debugf("%s start requests", Name)
-		resp, err := http.Get("https://myip.ipip.net/json")
+		resp, err := http.Get("https://api.myip.com")
 		if err != nil || resp.StatusCode != http.StatusOK {
 			log.Debug(err)
 			return nil, err
@@ -36,7 +37,7 @@ func init() {
 			return nil, err
 		} else {
 			// https://github.com/valyala/fastjson
-			if ip := fastjson.GetString(jsonStr, "data", "ip"); ip != "" {
+			if ip := fastjson.GetString(jsonStr, "ip"); ip != "" {
 				addr := net.ParseIP(ip)
 				log.Debugf("%s remote address is %s", Name, addr.String())
 				return &addr, nil
@@ -46,5 +47,5 @@ func init() {
 		return nil, fmt.Errorf("canot get IP address from ipip.net")
 	}
 
-	_ = simplyddns.RegisterSourceFunc("myipip", fn)
+	_ = simplyddns.RegisterSourceFunc("myip", fn)
 }
