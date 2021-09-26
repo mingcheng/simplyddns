@@ -246,11 +246,13 @@ func (j Job) Source(ctx context.Context, config *SourceConfig) (*net.IP, error) 
 			errTimes = errTimes + 1
 		}
 
-		if lastAddr != nil && !lastAddr.Equal(*addr) {
-			return nil, fmt.Errorf("fetch address is not the same, %v vs %v", lastAddr, addr)
-		}
+		if addr != nil {
+			if lastAddr != nil && !addr.Equal(*lastAddr) {
+				return nil, fmt.Errorf("fetch address is not the same, %v vs %v", lastAddr, addr)
+			}
 
-		lastAddr = addr
+			lastAddr = addr
+		}
 	}
 
 	if errTimes > 0 && len(sourceFunc) > 3 && errTimes >= len(j.SourceFunc)/2 {
