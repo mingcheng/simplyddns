@@ -42,11 +42,9 @@ steps:
       build_args_from_env:
         - GITEA_TOKEN
       dockerfile: Dockerfile
-      custom_dns: 119.29.29.29
-      mirror: https://pqbap4ya.mirror.aliyuncs.com/
       tags:
         - latest
-        - 1.4.0
+        - 1.4.1
 
   - name: "push docker image to github"
     image: plugins/docker
@@ -68,11 +66,9 @@ steps:
       password:
         from_secret: ghcr_docker_password
       dockerfile: Dockerfile
-      custom_dns: 119.29.29.29
-      mirror: https://pqbap4ya.mirror.aliyuncs.com/
       tags:
         - latest
-        - 1.4.0
+        - 1.4.1
 
 volumes:
   - name: docker-sock
