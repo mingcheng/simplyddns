@@ -36,8 +36,10 @@ type TargetConfig struct {
 }
 
 type WebHook struct {
-	Url   string `yaml:"url,omitempty" mapstructure:"url"`
-	Token string `yaml:"token" mapstructure:"token"`
+	Url      string `yaml:"url" mapstructure:"url"`
+	Token    string `yaml:"token" mapstructure:"token"`
+	UserName string `yaml:"token" mapstructure:"username"`
+	Password string `yaml:"token" mapstructure:"password"`
 }
 
 type JobConfig struct {
@@ -72,6 +74,10 @@ func (j *Job) RunWebhook(ctx context.Context, addr string, domains []string) (er
 
 	if token := j.Config.WebHook.Token; token != "" {
 		request.SetAuthToken(token)
+	}
+
+	if username := j.Config.WebHook.UserName; username != "" {
+		request.SetBasicAuth(username, j.Config.WebHook.Password)
 	}
 
 	var resp *resty.Response
@@ -126,10 +132,12 @@ func (j *Job) Start(ctx context.Context) {
 			}
 
 			// run the target func
-			if err = job.TargetFunc(ctx, addr, &job.Config.Target); err != nil {
+			err = job.TargetFunc(ctx, addr, &job.Config.Target)
+			if err != nil {
 				log.Warn(err)
 				continue
 			}
+			log.Infof("run target function is successful, please check")
 
 			// cache the last ip address
 			job.lastIP = addr
