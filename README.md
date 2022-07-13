@@ -134,11 +134,19 @@ WebHook 可以在任何配置更改的情况下通知到用户，可以参考使
 
 ```yaml
 webhook:
-  method: GET
   url: https://<your-webhook-address>
-  timeout: 30
 ```
 
-默认情况下 Method 为 GET，Timout 如果没有配置的话就是默认值。
+类似这样子配置后，当地址发生改变时，会将结果和更改的域名结果 POST 到对应的地址。结果的格式如下：
+
+```json
+{
+    "address": "127.0.0.1",
+    "domains": "a.com,b.com",
+    "now": "2022-07-13T15:00:10.931809+08:00"
+}
+```
+
+如果有多个域名的结果，会用逗号分隔。
 
 `- eof -`

@@ -18,5 +18,4 @@ ddns:
     target:
       type: "sleep"
     webhook:
-      method: "get"
-      url: "https://www.taobao.com/"
+      url: "https://httpbin.org/post"

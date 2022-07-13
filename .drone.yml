@@ -14,14 +14,10 @@ type: docker
 
 steps:
   - name: test
-    image: golang:1.16
+    image: golang:1.18
     environment:
       GOPROXY: "https://goproxy.cn,direct"
-      GITEA_TOKEN:
-        from_secret: gitea_token
     commands:
-      - env
-      - git config --global url."https://$GITEA_TOKEN@repo.wooramel.cn/".insteadOf "https://repo.wooramel.cn/"
       - make
 
   - name: publish-image
@@ -42,9 +38,9 @@ steps:
       registry: swr.cn-east-2.myhuaweicloud.com
       repo: swr.cn-east-2.myhuaweicloud.com/mingcheng/simplyddns
       username:
-        from_secret: docker_username
+        from_secret: huawei_docker_username
       password:
-        from_secret: docker_password
+        from_secret: huawei_docker_password
       build_args_from_env:
         - GITEA_TOKEN
       dockerfile: Dockerfile
@@ -52,7 +48,33 @@ steps:
       mirror: https://pqbap4ya.mirror.aliyuncs.com/
       tags:
         - latest
-        - 1.3.2
+        - 1.4.0
+
+  - name: publish-to-ghcr
+    image: plugins/docker
+    volumes:
+      - name: docker-sock
+        path: /var/run/docker.sock
+    environment:
+      GOPROXY: "https://goproxy.cn,direct"
+    when:
+      branch:
+        - master
+      event:
+        - push
+    settings:
+      registry: ghcr.io
+      repo: ghcr.io/mingcheng/simplyddns
+      username:
+        from_secret: ghcr_docker_username
+      password:
+        from_secret: ghcr_docker_password
+      dockerfile: Dockerfile
+      custom_dns: 119.29.29.29
+      mirror: https://pqbap4ya.mirror.aliyuncs.com/
+      tags:
+        - latest
+        - 1.4.0
 
 volumes:
   - name: docker-sock
