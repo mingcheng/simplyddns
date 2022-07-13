@@ -13,8 +13,8 @@ debug: Yes
 
 ddns:
   - source:
-      type: "lo"
-      interval: 60 # 1 minute
+      type: ipify,myip,whatis
+      interval: 30 # sec
     target:
       type: "sleep"
     webhook:

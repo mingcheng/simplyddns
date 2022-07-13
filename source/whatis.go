@@ -12,39 +12,35 @@ package source
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
 
 	"github.com/mingcheng/simplyddns"
-	"github.com/valyala/fastjson"
 )
 
 func init() {
-	const Name = "MyIPIP.net"
+	const Name = "whatismyipaddress.com"
 	fn := func(ctx context.Context, _ *simplyddns.SourceConfig) (*net.IP, error) {
+
 		log.Debugf("%s start requests", Name)
-		resp, err := http.Get("https://myip.ipip.net/json")
+		resp, err := http.Get("https://ipv4bot.whatismyipaddress.com")
 		if err != nil || resp.StatusCode != http.StatusOK {
 			log.Debug(err)
 			return nil, err
 		}
 
-		if jsonStr, err := ioutil.ReadAll(resp.Body); err != nil {
+		ip, err := ioutil.ReadAll(resp.Body)
+
+		if err != nil {
 			log.Debug(err)
 			return nil, err
-		} else {
-			// https://github.com/valyala/fastjson
-			if ip := fastjson.GetString(jsonStr, "data", "ip"); ip != "" {
-				addr := net.ParseIP(ip)
-				log.Debugf("%s remote address is %s", Name, addr.String())
-				return &addr, nil
-			}
 		}
 
-		return nil, fmt.Errorf("canot get IP address from ipip.net")
+		addr := net.ParseIP(string(ip))
+		log.Debugf("%s remote address is %s", Name, addr.String())
+		return &addr, nil
 	}
 
-	_ = simplyddns.RegisterSourceFunc("myipip", fn)
+	_ = simplyddns.RegisterSourceFunc("whatis", fn)
 }

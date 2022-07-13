@@ -3,7 +3,7 @@
  * Author: Ming Cheng<mingcheng@outlook.com>
  *
  * Created Date: Saturday, December 26th 2020, 10:52:17 pm
- * Last Modified: Saturday, February 13th 2021, 10:39:30 pm
+ * Last Modified: Sunday, December 27th 2020, 2:08:47 pm
  *
  * http://www.opensource.org/licenses/MIT
  */
@@ -19,13 +19,12 @@ import (
 	"github.com/mingcheng/simplyddns"
 )
 
-func TestSourceIPSB(t *testing.T) {
-	fn, err := simplyddns.SourceFunc("ipsb")
+func TestSourceIPify(t *testing.T) {
+	fn, err := simplyddns.SourceFuncByName("ipify")
 	assert.NoError(t, err)
 
 	ip, err := fn(context.TODO(), nil)
 	assert.NoError(t, err)
-	assert.NotNil(t, ip)
 
 	assert.False(t, ip.IsLoopback())
 	assert.NotEqual(t, ip.String(), "")

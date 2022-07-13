@@ -23,7 +23,7 @@ import (
 type AliDNS struct {
 	Client  *alidns.Client
 	Config  *simplyddns.TargetConfig
-	domains map[string]*alidns.Domain
+	domains map[string]*alidns.DomainInDescribeDomains
 	records map[string]*alidns.Record
 }
 
@@ -32,7 +32,7 @@ func NewAliDNS(config *simplyddns.TargetConfig) (*AliDNS, error) {
 	var (
 		err        error
 		client     *alidns.Client
-		allDomains []alidns.Domain
+		allDomains []alidns.DomainInDescribeDomains
 	)
 	client, err = alidns.NewClientWithAccessKey("cn-hangzhou", config.Key, config.Token)
 	if err != nil {
@@ -42,7 +42,7 @@ func NewAliDNS(config *simplyddns.TargetConfig) (*AliDNS, error) {
 	instance := &AliDNS{
 		Client:  client,
 		Config:  config,
-		domains: map[string]*alidns.Domain{},
+		domains: map[string]*alidns.DomainInDescribeDomains{},
 		records: map[string]*alidns.Record{},
 	}
 
@@ -61,7 +61,7 @@ func NewAliDNS(config *simplyddns.TargetConfig) (*AliDNS, error) {
 }
 
 // All to get All domains
-func (a *AliDNS) All() ([]alidns.Domain, error) {
+func (a *AliDNS) All() ([]alidns.DomainInDescribeDomains, error) {
 	req := alidns.CreateDescribeDomainsRequest()
 	domains, err := a.Client.DescribeDomains(req)
 	if err != nil {
@@ -72,7 +72,7 @@ func (a *AliDNS) All() ([]alidns.Domain, error) {
 		return domains.Domains.Domain, nil
 	}
 
-	return []alidns.Domain{}, nil
+	return []alidns.DomainInDescribeDomains{}, nil
 }
 
 // GetRecord to get a single DNS record

@@ -22,10 +22,14 @@ import (
 )
 
 func TestTargetNameDotCom(t *testing.T) {
+	if _, exists := os.LookupEnv("NAME_COM_PROXY"); !exists {
+		return
+	}
+
 	const Address = "172.16.1.1"
 	ip := net.ParseIP(Address)
 
-	fn, err := simplyddns.TargetFunc("namedotcom")
+	fn, err := simplyddns.TargetFuncByName("namedotcom")
 	assert.NoError(t, err)
 	assert.NotNil(t, fn)
 
