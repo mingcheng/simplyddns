@@ -6,41 +6,46 @@ import (
 	"net"
 )
 
+type SourceFunc func(context.Context, *SourceConfig) (*net.IP, error)
+type TargetFunc func(context.Context, *net.IP, *TargetConfig) error
+
 var (
-	sourceFunc = map[string]func(context.Context, *SourceConfig) (*net.IP, error){}
-	targetFunc = map[string]func(context.Context, *net.IP, *TargetConfig) error{}
+	sourceFuncs = map[string]SourceFunc{}
+	targetFuncs = map[string]TargetFunc{}
 )
 
-func SourceFunc(name string) (func(context.Context, *SourceConfig) (*net.IP, error), error) {
-	if fn := sourceFunc[name]; fn != nil {
-		return fn, nil
+func SourceFuncByName(name string) (fn SourceFunc, err error) {
+	if fn = sourceFuncs[name]; fn != nil {
+		err = fmt.Errorf("the source function which name %s is not found", name)
+		return
 	}
 
-	return nil, fmt.Errorf("source func %s is not found", name)
+	return
 }
 
-func RegisterSourceFunc(name string, fn func(context.Context, *SourceConfig) (*net.IP, error)) error {
-	if fn, _ := SourceFunc(name); fn != nil {
+func RegisterSourceFunc(name string, fn SourceFunc) (err error) {
+	if found, _ := SourceFuncByName(name); found != nil {
 		return fmt.Errorf("source func %s is already registered", name)
 	}
 
-	sourceFunc[name] = fn
+	sourceFuncs[name] = fn
 	return nil
 }
 
-func TargetFunc(name string) (func(context.Context, *net.IP, *TargetConfig) error, error) {
-	if fn := targetFunc[name]; fn != nil {
-		return fn, nil
+func TargetFuncByName(name string) (fn TargetFunc, err error) {
+	if fn = targetFuncs[name]; fn != nil {
+		err = fmt.Errorf("the target function which name %s is not found", name)
+		return
 	}
 
-	return nil, fmt.Errorf("target func %s is not found", name)
+	return
 }
 
-func RegisterTargetFunc(name string, fn func(context.Context, *net.IP, *TargetConfig) error) error {
-	if fn, _ := TargetFunc(name); fn != nil {
+func RegisterTargetFunc(name string, fn TargetFunc) (err error) {
+	if found, _ := TargetFuncByName(name); found != nil {
 		return fmt.Errorf("target func %s is already registered", name)
 	}
 
-	targetFunc[name] = fn
+	targetFuncs[name] = fn
 	return nil
 }

@@ -3,7 +3,7 @@
  * Author: Ming Cheng<mingcheng@outlook.com>
  *
  * Created Date: Friday, December 25th 2020, 10:45:54 pm
- * Last Modified: Friday, August 27th 2021, 9:32:31 am
+ * Last Modified: Wednesday, July 13th 2022, 12:26:13 pm
  *
  * http://www.opensource.org/licenses/MIT
  */
@@ -17,8 +17,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	notify "repo.wooramel.cn/mingcheng/srk-notification"
 )
 
 type SourceConfig struct {
@@ -42,23 +40,23 @@ type WebHook struct {
 	Timeout uint   `yaml:"timeout" mapstructure:"timeout"`
 }
 
-type Notification struct {
-	MQ         string `yaml:"mq" default:"nsq" mapstructure:"mq"`
-	Type       string `yaml:"type" default:"bark" mapstructure:"type"`
-	Addr       string `yaml:"addr,omitempty" mapstructure:"addr"`
-	Topic      string `yaml:"topic,omitempty" mapstructure:"topic"`
-	Exchange   string `yaml:"exchange,omitempty" mapstructure:"exchange"`
-	RoutingKey string `yaml:"routing_key,omitempty" mapstructure:"routing_key"`
-	Receiver   string `yaml:"receiver" mapstructure:"receiver"`
-	Subject    string `yaml:"subject,omitempty" mapstructure:"subject"`
-	Content    string `yaml:"content,omitempty" mapstructure:"content"`
-}
+// type Notification struct {
+// 	MQ         string `yaml:"mq" default:"nsq" mapstructure:"mq"`
+// 	Type       string `yaml:"type" default:"bark" mapstructure:"type"`
+// 	Addr       string `yaml:"addr,omitempty" mapstructure:"addr"`
+// 	Topic      string `yaml:"topic,omitempty" mapstructure:"topic"`
+// 	Exchange   string `yaml:"exchange,omitempty" mapstructure:"exchange"`
+// 	RoutingKey string `yaml:"routing_key,omitempty" mapstructure:"routing_key"`
+// 	Receiver   string `yaml:"receiver" mapstructure:"receiver"`
+// 	Subject    string `yaml:"subject,omitempty" mapstructure:"subject"`
+// 	Content    string `yaml:"content,omitempty" mapstructure:"content"`
+// }
 
 type JobConfig struct {
-	WebHook      WebHook      `yaml:"webhook" mapstructure:"webhook"`
-	Notification Notification `yaml:"notify" mapstructure:"notify"`
-	Source       SourceConfig `yaml:"source,omitempty" mapstructure:"source"`
-	Target       TargetConfig `yaml:"target,omitempty" mapstructure:"target"`
+	WebHook WebHook `yaml:"webhook" mapstructure:"webhook"`
+	// Notification Notification `yaml:"notify" mapstructure:"notify"`
+	Source SourceConfig `yaml:"source,omitempty" mapstructure:"source"`
+	Target TargetConfig `yaml:"target,omitempty" mapstructure:"target"`
 }
 
 type Job struct {
@@ -160,55 +158,6 @@ func (j *Job) Start(ctx context.Context) {
 					log.Infof("run webhook %s is finished", config.WebHook.Url)
 				}
 			}
-
-			// if notification center is configured
-			if len(config.Notification.Addr) > 0 {
-				cfg := config.Notification
-
-				log.Debugf("notification config %v", cfg)
-				var (
-					notification notify.SenderCmd
-					err          error
-				)
-
-				switch strings.ToLower(cfg.MQ) {
-				case "nsq":
-					log.Debug("NSQ is configured")
-					notification, err = notify.NewNSQSender(notify.NSQConfig{
-						Host:  cfg.Addr,
-						Topic: cfg.Topic,
-					})
-				case "amqp":
-					log.Debug("RabbitMQ is configured")
-					notification, err = notify.NewAMQPSender(notify.AMQPConfig{
-						Addr:       cfg.Addr,
-						RoutingKey: cfg.RoutingKey,
-						Exchange:   cfg.Exchange,
-					})
-				default:
-					log.Errorf("not support MQ type %v", cfg.MQ)
-					return
-				}
-
-				if err != nil {
-					log.Error(err)
-					return
-				}
-
-				log.Debug(notification)
-				err = notification.Send(notify.Message{
-					Type:     cfg.Type,
-					Receiver: cfg.Receiver,
-					Subject:  cfg.Subject,
-					Content:  cfg.Content,
-				})
-
-				if err != nil {
-					log.Error(err)
-				} else {
-					log.Info("notify message has been sent")
-				}
-			}
 		}
 	}()
 
@@ -255,7 +204,7 @@ func (j Job) Source(ctx context.Context, config *SourceConfig) (*net.IP, error) 
 		}
 	}
 
-	if errTimes > 0 && len(sourceFunc) > 3 && errTimes >= len(j.SourceFunc)/2 {
+	if errTimes > 0 && len(sourceFuncs) > 3 && errTimes >= len(j.SourceFunc)/2 {
 		return nil, fmt.Errorf("max error times reached(%d), so the result is not right", errTimes)
 	}
 
@@ -263,29 +212,32 @@ func (j Job) Source(ctx context.Context, config *SourceConfig) (*net.IP, error) 
 }
 
 // NewJob for instance a new ddns job
-func NewJob(config JobConfig) (*Job, error) {
+func NewJob(config JobConfig) (job *Job, err error) {
 	// check the configure
 	if config.Source.Type == "" || config.Target.Type == "" {
-		return nil, fmt.Errorf("source or target type can not be empty")
+		err = fmt.Errorf("source or target type can not be empty")
+		return
 	}
 
 	if config.Source.Interval <= 0 {
-		return nil, fmt.Errorf("source check interval can not below zero or empty")
+		err = fmt.Errorf("source check interval can not below zero or empty")
+		return
 	}
 
 	// split fn types as array
 	types := strings.Split(config.Source.Type, ",")
 	if len(types) == 0 {
-		return nil, fmt.Errorf("load source %s is empty", config.Source.Type)
+		err = fmt.Errorf("load source %s is empty", config.Source.Type)
+		return
 	}
 
 	// source funs is array
 	var sourceFuncs []func(context.Context, *SourceConfig) (*net.IP, error)
 
 	for _, v := range types {
-		fn, err := SourceFunc(strings.ToLower(v))
+		fn, err = SourceFunc(strings.ToLower(v))
 		if err != nil {
-			return nil, err
+			return
 		}
 
 		// add func to source funcs

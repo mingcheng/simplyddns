@@ -11,7 +11,7 @@ import (
 func TestMultiSourceFunc(t *testing.T) {
 	job, err := simplyddns.NewJob(simplyddns.JobConfig{
 		Source: simplyddns.SourceConfig{
-			Type:     "ipify,whatis",
+			Type:     "ipify",
 			Interval: 1,
 		},
 		Target: simplyddns.TargetConfig{
