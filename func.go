@@ -19,6 +19,15 @@ func init() {
 	targetFuncs = make(map[string]TargetFunc)
 }
 
+func GetAllSupportSourceFunc() []string {
+	var funcNames []string
+	for k, _ := range sourceFuncs {
+		funcNames = append(funcNames, k)
+	}
+
+	return funcNames
+}
+
 func SourceFuncByName(name string) (fn SourceFunc, err error) {
 	if fn = sourceFuncs[name]; fn == nil {
 		err = fmt.Errorf("the source function which name %s is not found", name)
