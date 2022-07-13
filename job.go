@@ -56,16 +56,17 @@ type Job struct {
 }
 
 // RunWebhook to run the webhook when ip address has updated
-func (j *Job) RunWebhook(ctx context.Context, ip *net.IP, domains []string) (err error) {
+func (j *Job) RunWebhook(ctx context.Context, addr string, domains []string) (err error) {
 	client := resty.New()
 
 	request := client.R().
 		SetContext(ctx).
-		SetHeader("SimplyDDNS-Address", ip.String()).
-		SetHeader("SimplyDDNS-Domains", strings.Join(domains, ",")).
+		SetHeader("Address", addr).
+		SetHeader("Domains", strings.Join(domains, ",")).
 		SetBody(map[string]interface{}{
-			"address": ip,
+			"address": addr,
 			"domains": strings.Join(domains, ","),
+			"now":     time.Now(),
 		}).
 		SetError(&err)
 
@@ -136,7 +137,7 @@ func (j *Job) Start(ctx context.Context) {
 			// trigger the webhook if configured
 			if config.WebHook.Url != "" {
 				log.Tracef("the webhook url is %s", config.WebHook.Url)
-				if err = job.RunWebhook(ctx, addr, domains); err != nil {
+				if err = job.RunWebhook(ctx, addr.String(), domains); err != nil {
 					log.Warnf("run webhook with error %s", err.Error())
 				} else {
 					log.Infof("run webhook %s is finished", config.WebHook.Url)
