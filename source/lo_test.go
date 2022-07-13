@@ -19,7 +19,7 @@ import (
 )
 
 func TestSourceLookback(t *testing.T) {
-	fn, err := simplyddns.SourceFunc("lo")
+	fn, err := simplyddns.SourceFuncByName("lo")
 	assert.NoError(t, err)
 
 	ip, err := fn(context.TODO(), nil)

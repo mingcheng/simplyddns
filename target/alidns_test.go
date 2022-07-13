@@ -28,11 +28,11 @@ func TestNewAliDNS(t *testing.T) {
 
 	var err error
 
-	source, err := simplyddns.SourceFunc("myipip")
+	source, err := simplyddns.SourceFuncByName("myipip")
 	assert.NoError(t, err)
 	assert.NotNil(t, source)
 
-	target, err := simplyddns.TargetFunc("alidns")
+	target, err := simplyddns.TargetFuncByName("alidns")
 	assert.NoError(t, err)
 
 	ip, err := source(context.TODO(), nil)

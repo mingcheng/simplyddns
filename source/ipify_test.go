@@ -20,7 +20,7 @@ import (
 )
 
 func TestSourceIPify(t *testing.T) {
-	fn, err := simplyddns.SourceFunc("ipify")
+	fn, err := simplyddns.SourceFuncByName("ipify")
 	assert.NoError(t, err)
 
 	ip, err := fn(context.TODO(), nil)

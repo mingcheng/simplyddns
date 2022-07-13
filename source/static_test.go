@@ -20,7 +20,7 @@ import (
 
 func TestSourceStatic(t *testing.T) {
 	const Address = "192.168.1.1"
-	fn, err := simplyddns.SourceFunc("static")
+	fn, err := simplyddns.SourceFuncByName("static")
 	assert.NoError(t, err)
 	assert.NotNil(t, fn)
 

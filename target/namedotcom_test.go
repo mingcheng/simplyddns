@@ -29,7 +29,7 @@ func TestTargetNameDotCom(t *testing.T) {
 	const Address = "172.16.1.1"
 	ip := net.ParseIP(Address)
 
-	fn, err := simplyddns.TargetFunc("namedotcom")
+	fn, err := simplyddns.TargetFuncByName("namedotcom")
 	assert.NoError(t, err)
 	assert.NotNil(t, fn)
 

@@ -10,12 +10,17 @@ type SourceFunc func(context.Context, *SourceConfig) (*net.IP, error)
 type TargetFunc func(context.Context, *net.IP, *TargetConfig) error
 
 var (
-	sourceFuncs = map[string]SourceFunc{}
-	targetFuncs = map[string]TargetFunc{}
+	sourceFuncs map[string]SourceFunc
+	targetFuncs map[string]TargetFunc
 )
 
+func init() {
+	sourceFuncs = make(map[string]SourceFunc)
+	targetFuncs = make(map[string]TargetFunc)
+}
+
 func SourceFuncByName(name string) (fn SourceFunc, err error) {
-	if fn = sourceFuncs[name]; fn != nil {
+	if fn = sourceFuncs[name]; fn == nil {
 		err = fmt.Errorf("the source function which name %s is not found", name)
 		return
 	}
@@ -33,7 +38,7 @@ func RegisterSourceFunc(name string, fn SourceFunc) (err error) {
 }
 
 func TargetFuncByName(name string) (fn TargetFunc, err error) {
-	if fn = targetFuncs[name]; fn != nil {
+	if fn = targetFuncs[name]; fn == nil {
 		err = fmt.Errorf("the target function which name %s is not found", name)
 		return
 	}

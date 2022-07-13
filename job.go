@@ -13,6 +13,7 @@ package simplyddns
 import (
 	"context"
 	"fmt"
+	"github.com/go-resty/resty/v2"
 	"net"
 	"net/http"
 	"strings"
@@ -35,69 +36,52 @@ type TargetConfig struct {
 }
 
 type WebHook struct {
-	Method  string `yaml:"method,omitempty" default:"GET" mapstructure:"method"`
-	Url     string `yaml:"url,omitempty" mapstructure:"url"`
-	Timeout uint   `yaml:"timeout" mapstructure:"timeout"`
+	Url   string `yaml:"url,omitempty" mapstructure:"url"`
+	Token string `yaml:"token" mapstructure:"token"`
 }
 
-// type Notification struct {
-// 	MQ         string `yaml:"mq" default:"nsq" mapstructure:"mq"`
-// 	Type       string `yaml:"type" default:"bark" mapstructure:"type"`
-// 	Addr       string `yaml:"addr,omitempty" mapstructure:"addr"`
-// 	Topic      string `yaml:"topic,omitempty" mapstructure:"topic"`
-// 	Exchange   string `yaml:"exchange,omitempty" mapstructure:"exchange"`
-// 	RoutingKey string `yaml:"routing_key,omitempty" mapstructure:"routing_key"`
-// 	Receiver   string `yaml:"receiver" mapstructure:"receiver"`
-// 	Subject    string `yaml:"subject,omitempty" mapstructure:"subject"`
-// 	Content    string `yaml:"content,omitempty" mapstructure:"content"`
-// }
-
 type JobConfig struct {
-	WebHook WebHook `yaml:"webhook" mapstructure:"webhook"`
-	// Notification Notification `yaml:"notify" mapstructure:"notify"`
-	Source SourceConfig `yaml:"source,omitempty" mapstructure:"source"`
-	Target TargetConfig `yaml:"target,omitempty" mapstructure:"target"`
+	WebHook WebHook      `yaml:"webhook" mapstructure:"webhook"`
+	Source  SourceConfig `yaml:"source,omitempty" mapstructure:"source"`
+	Target  TargetConfig `yaml:"target,omitempty" mapstructure:"target"`
 }
 
 type Job struct {
 	Config     *JobConfig
-	SourceFunc []func(context.Context, *SourceConfig) (*net.IP, error)
-	TargetFunc func(context.Context, *net.IP, *TargetConfig) error
+	SourceFunc []SourceFunc
+	TargetFunc TargetFunc
 	ticker     *time.Ticker
 	done       chan bool
 	lastIP     *net.IP
 }
 
 // RunWebhook to run the webhook when ip address has updated
-func (j *Job) RunWebhook(ctx context.Context, ip *net.IP, _ error, domains []string) error {
-	webHook := j.Config.WebHook
-	client := &http.Client{}
+func (j *Job) RunWebhook(ctx context.Context, addr string, domains []string) (err error) {
+	client := resty.New()
 
-	if webHook.Timeout > 0 {
-		log.Debugf("set http webhook client timeout %d", webHook.Timeout)
-		client.Timeout = time.Duration(webHook.Timeout) * time.Second
+	request := client.R().
+		SetContext(ctx).
+		SetHeader("Address", addr).
+		SetHeader("Domains", strings.Join(domains, ",")).
+		SetBody(map[string]interface{}{
+			"address": addr,
+			"domains": strings.Join(domains, ","),
+			"now":     time.Now(),
+		}).
+		SetError(&err)
+
+	if token := j.Config.WebHook.Token; token != "" {
+		request.SetAuthToken(token)
 	}
 
-	if webHook.Method == "" {
-		webHook.Method = "GET"
+	var resp *resty.Response
+	resp, err = request.Post(j.Config.WebHook.Url)
+
+	if resp.StatusCode() != http.StatusOK {
+		err = fmt.Errorf("%v", resp.Status())
 	}
 
-	log.Infof("set webhook request client method %s and url %s", webHook.Method, webHook.Url)
-	req, err := http.NewRequest(strings.ToUpper(webHook.Method), webHook.Url, nil)
-	if err != nil {
-		log.Warn(err.Error())
-		return err
-	}
-
-	req.Header.Add("SimplyDDNS-Address", ip.String())
-	req.Header.Add("SimplyDDNS-Domains", strings.Join(domains, ","))
-	req.WithContext(ctx)
-
-	if _, err := client.Do(req); err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // Start to start a job
@@ -151,8 +135,9 @@ func (j *Job) Start(ctx context.Context) {
 			job.lastIP = addr
 
 			// trigger the webhook if configured
-			if len(config.WebHook.Url) > 0 {
-				if err = job.RunWebhook(ctx, addr, err, domains); err != nil {
+			if config.WebHook.Url != "" {
+				log.Tracef("the webhook url is %s", config.WebHook.Url)
+				if err = job.RunWebhook(ctx, addr.String(), domains); err != nil {
 					log.Warnf("run webhook with error %s", err.Error())
 				} else {
 					log.Infof("run webhook %s is finished", config.WebHook.Url)
@@ -231,20 +216,21 @@ func NewJob(config JobConfig) (job *Job, err error) {
 		return
 	}
 
-	// source funs is array
-	var sourceFuncs []func(context.Context, *SourceConfig) (*net.IP, error)
+	// notice: the source functions is an array
+	var sourceFuncs []SourceFunc
 
 	for _, v := range types {
-		fn, err = SourceFunc(strings.ToLower(v))
+		var fn SourceFunc
+		fn, err = SourceFuncByName(strings.ToLower(v))
 		if err != nil {
 			return
 		}
 
-		// add func to source funcs
+		// add func to source functions
 		sourceFuncs = append(sourceFuncs, fn)
 	}
 
-	fnTarget, err := TargetFunc(config.Target.Type)
+	fnTarget, err := TargetFuncByName(config.Target.Type)
 	if err != nil {
 		return nil, err
 	}
