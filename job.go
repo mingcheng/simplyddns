@@ -61,8 +61,8 @@ type JobConfig struct {
 
 type Job struct {
 	Config     *JobConfig
-	SourceFunc []func(context.Context, *SourceConfig) (*net.IP, error)
-	TargetFunc func(context.Context, *net.IP, *TargetConfig) error
+	SourceFunc []SourceFunc
+	TargetFunc TargetFunc
 	ticker     *time.Ticker
 	done       chan bool
 	lastIP     *net.IP
@@ -231,20 +231,21 @@ func NewJob(config JobConfig) (job *Job, err error) {
 		return
 	}
 
-	// source funs is array
-	var sourceFuncs []func(context.Context, *SourceConfig) (*net.IP, error)
+	// notice: the source functions is an array
+	var sourceFuncs []SourceFunc
 
 	for _, v := range types {
-		fn, err = SourceFunc(strings.ToLower(v))
+		var fn SourceFunc
+		fn, err = SourceFuncByName(strings.ToLower(v))
 		if err != nil {
 			return
 		}
 
-		// add func to source funcs
+		// add func to source functions
 		sourceFuncs = append(sourceFuncs, fn)
 	}
 
-	fnTarget, err := TargetFunc(config.Target.Type)
+	fnTarget, err := TargetFuncByName(config.Target.Type)
 	if err != nil {
 		return nil, err
 	}

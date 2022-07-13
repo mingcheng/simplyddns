@@ -13,9 +13,8 @@ package source
 import (
 	"context"
 	"fmt"
-	"net"
-
 	ddns "github.com/mingcheng/simplyddns"
+	"net"
 )
 
 func init() {
