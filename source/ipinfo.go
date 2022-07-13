@@ -2,9 +2,9 @@ package source
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/mingcheng/simplyddns"
+	"github.com/tidwall/gjson"
 	"net"
 )
 
@@ -13,10 +13,6 @@ func init() {
 		Name  = "ipinfo"
 		Token = "8fe8bfdbb0d459"
 	)
-
-	type Result struct {
-		IP string `json:"ip"`
-	}
 
 	fn := func(ctx context.Context, _ *simplyddns.SourceConfig) (*net.IP, error) {
 		data, err := RawStrByURL(context.Background(), "https://ipinfo.io", map[string]string{
@@ -28,14 +24,12 @@ func init() {
 			return nil, err
 		}
 
-		result := Result{}
-		err = json.Unmarshal([]byte(data), &result)
-		if err != nil {
-			return nil, err
+		if result := gjson.Get(data, "ip").Str; result != "" {
+			ip := net.ParseIP(result)
+			return &ip, nil
 		}
 
-		ip := net.ParseIP(result.IP)
-		return &ip, nil
+		return nil, fmt.Errorf("can not found address from %s", Name)
 	}
 
 	_ = simplyddns.RegisterSourceFunc(Name, fn)
