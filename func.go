@@ -38,7 +38,7 @@ func RegisterSourceFunc(name string, fn SourceFunc) (err error) {
 }
 
 func TargetFuncByName(name string) (fn TargetFunc, err error) {
-	if fn = targetFuncs[name]; fn != nil {
+	if fn = targetFuncs[name]; fn == nil {
 		err = fmt.Errorf("the target function which name %s is not found", name)
 		return
 	}

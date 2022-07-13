@@ -6,6 +6,8 @@ import (
 
 	"github.com/mingcheng/simplyddns"
 	"github.com/stretchr/testify/assert"
+
+	_ "github.com/mingcheng/simplyddns/target"
 )
 
 func TestMultiSourceFunc(t *testing.T) {
