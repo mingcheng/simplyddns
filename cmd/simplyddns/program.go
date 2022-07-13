@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os"
+	"strings"
 
 	"github.com/judwhite/go-svc"
 	"github.com/mingcheng/simplyddns"
@@ -18,6 +19,9 @@ type Program struct {
 // Init Program by svc library
 func (p *Program) Init(env svc.Environment) error {
 	log.Printf("%s %s, %s", AppName, BuildVersion, BuildTime)
+
+	log.Printf("supported source funcs is [%s]",
+		strings.Join(simplyddns.GetAllSupportSourceFunc(), ","))
 
 	// read configure from file
 	if err := ReadConfigure(p.Configure); err != nil {
