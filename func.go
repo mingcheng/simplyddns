@@ -21,7 +21,7 @@ func init() {
 
 func GetAllSupportSourceFunc() []string {
 	var funcNames []string
-	for k, _ := range sourceFuncs {
+	for k := range sourceFuncs {
 		funcNames = append(funcNames, k)
 	}
 

@@ -30,3 +30,4 @@ coverage.html
 # Emacs backup files
 *~
 .*~
+/.vscode/*.log
