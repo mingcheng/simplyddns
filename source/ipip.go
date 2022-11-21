@@ -9,22 +9,18 @@ import (
 )
 
 func init() {
-	const (
-		Name  = "ipinfo"
-		Token = "8fe8bfdbb0d459"
-	)
+	const Name = "ipip"
 
 	fn := func(ctx context.Context, _ *simplyddns.SourceConfig) (*net.IP, error) {
-		data, err := RawStrByURL(context.Background(), "https://ipinfo.io", map[string]string{
-			"Accept":        "application/json",
-			"Authorization": fmt.Sprintf("Bearer %s", Token),
+		data, err := RawStrByURL(context.Background(), "https://myip.ipip.net/json", map[string]string{
+			"Accept": "application/json",
 		})
 
 		if err != nil {
 			return nil, err
 		}
 
-		if result := gjson.Get(data, "ip").Str; result != "" {
+		if result := gjson.Get(data, "data.ip").Str; result != "" {
 			ip := net.ParseIP(result)
 			return &ip, nil
 		}

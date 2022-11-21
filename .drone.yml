@@ -3,7 +3,7 @@
 # Author: Ming Cheng<mingcheng@outlook.com>
 #
 # Created Date: Thursday, September 17th 2020, 7:16:54 pm
-# Last Modified: Monday, July 12th 2021, 3:09:29 pm
+# Last Modified: Monday, November 21st 2022, 4:42:45 pm
 #
 # http://www.opensource.org/licenses/MIT
 ###
@@ -14,7 +14,7 @@ type: docker
 
 steps:
   - name: "test and build"
-    image: golang:1.18
+    image: golang:1.19
     environment:
       GOPROXY: "https://goproxy.cn,direct"
     commands:
@@ -44,7 +44,7 @@ steps:
       dockerfile: Dockerfile
       tags:
         - latest
-        - 1.4.2
+        - 1.4.3
 
   - name: "push docker image to github"
     image: plugins/docker
