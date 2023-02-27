@@ -1,4 +1,4 @@
-FROM golang:1.18 AS builder
+FROM golang:1.19 AS builder
 LABEL maintainer="mingcheng<mingcheng@outlook.com>"
 
 ARG GITEA_TOKEN
