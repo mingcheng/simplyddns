@@ -3,7 +3,7 @@
 # Author: Ming Cheng<mingcheng@outlook.com>
 #
 # Created Date: Thursday, September 17th 2020, 7:16:54 pm
-# Last Modified: Monday, November 21st 2022, 4:42:45 pm
+# Last Modified: Monday, November 21st 2022, 4:52:59 pm
 #
 # http://www.opensource.org/licenses/MIT
 ###
@@ -44,7 +44,7 @@ steps:
       dockerfile: Dockerfile
       tags:
         - latest
-        - 1.4.3
+        - 1.4.4
 
   - name: "push docker image to github"
     image: plugins/docker
@@ -68,7 +68,7 @@ steps:
       dockerfile: Dockerfile
       tags:
         - latest
-        - 1.4.2
+        - 1.4.4
 
 volumes:
   - name: docker-sock
