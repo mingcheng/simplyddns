@@ -18,7 +18,7 @@ type Program struct {
 
 // Init Program by svc library
 func (p *Program) Init(env svc.Environment) error {
-	log.Printf("%s %s, %s", AppName, BuildVersion, BuildTime)
+	log.Printf("%s %s, build on %s(%s)", AppName, BuildVersion, BuildTime, BuildCommit)
 
 	log.Printf("supported source funcs is [%s]",
 		strings.Join(simplyddns.GetAllSupportSourceFunc(), ","))
