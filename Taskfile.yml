@@ -13,7 +13,7 @@ tasks:
 
   build:
     deps:
-      - clean
+      - test
     sources:
       - ./cmd/simplyddns/*.go
       - ./source/*.go

@@ -13,12 +13,13 @@ name: default
 type: docker
 
 steps:
-  - name: "test and build"
-    image: golang:1.19
+  - name: 'test the source proxy online'
+    image: golang:1.20
     environment:
       GOPROXY: "https://goproxy.cn,direct"
     commands:
-      - make
+      - go install github.com/go-task/task/v3/cmd/task@latest
+      - task test
 
   - name: "push docker image to huawei cloud"
     image: plugins/docker
@@ -44,7 +45,7 @@ steps:
       dockerfile: Dockerfile
       tags:
         - latest
-        - 1.4.3
+        - 1.5.0
 
   - name: "push docker image to github"
     image: plugins/docker
@@ -68,7 +69,7 @@ steps:
       dockerfile: Dockerfile
       tags:
         - latest
-        - 1.4.2
+        - 1.5.0
 
 volumes:
   - name: docker-sock
