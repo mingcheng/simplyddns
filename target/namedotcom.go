@@ -26,6 +26,7 @@ type NameCom struct {
 	instance *namedotcom.NameCom
 }
 
+// Ping function is used to test if the namedotcom instance is available
 func (c *NameCom) Ping() error {
 	if _, err := c.instance.HelloFunc(); err != nil {
 		return err
@@ -34,6 +35,7 @@ func (c *NameCom) Ping() error {
 	return nil
 }
 
+// FindRecord function is used to find the record from namedotcom instance
 func (c *NameCom) FindRecord(domain string) (*namedotcom.Record, error) {
 	// if already cached
 	if c.Records[domain] != nil {
@@ -77,10 +79,12 @@ func (c *NameCom) FindRecord(domain string) (*namedotcom.Record, error) {
 	return find, nil
 }
 
+// UpdateRecord function is used to update the record from namedotcom instance
 func (c *NameCom) UpdateRecord(record *namedotcom.Record) (*namedotcom.Record, error) {
 	return c.instance.UpdateRecord(record)
 }
 
+// CreateRecord function is used to create the record from namedotcom instance
 func (c *NameCom) CreateRecord(domain string, addr *net.IP) (*namedotcom.Record, error) {
 	tld, err := ddns.ParseDomain(domain)
 	if err != nil {
@@ -106,6 +110,7 @@ func init() {
 	NewNameCom := func(key, token string, config *ddns.TargetConfig) (*NameCom, error) {
 		instance := namedotcom.New(key, token)
 		if config.Proxy != "" {
+			// namedotcom proxy only supports specific ip whitelist
 			if client, err := ddns.ProxyHttpClient(config.Proxy); client != nil {
 				instance.Client = client
 			} else {

@@ -19,7 +19,7 @@ import (
 	"github.com/mingcheng/simplyddns"
 )
 
-// AliDNS 阿里云 dns 实现
+// AliDNS is the target for aliyun dns
 type AliDNS struct {
 	Client  *alidns.Client
 	Config  *simplyddns.TargetConfig
@@ -27,7 +27,7 @@ type AliDNS struct {
 	records map[string]*alidns.Record
 }
 
-// NewAliDNS for a new intance
+// NewAliDNS for creating a new instance of AliDNS
 func NewAliDNS(config *simplyddns.TargetConfig) (*AliDNS, error) {
 	var (
 		err        error
@@ -60,7 +60,7 @@ func NewAliDNS(config *simplyddns.TargetConfig) (*AliDNS, error) {
 	return instance, nil
 }
 
-// All to get All domains
+// All to get all domains
 func (a *AliDNS) All() ([]alidns.DomainInDescribeDomains, error) {
 	req := alidns.CreateDescribeDomainsRequest()
 	domains, err := a.Client.DescribeDomains(req)
