@@ -25,6 +25,7 @@ const AppName = "simplyddns"
 var (
 	BuildTime    = "unknown"
 	BuildVersion = "unknown"
+	BuildCommit  = "unknown"
 	log          = simplyddns.NewLogger()
 )
 

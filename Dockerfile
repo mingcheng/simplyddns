@@ -1,4 +1,4 @@
-FROM golang:1.18 AS builder
+FROM golang:1.20 AS builder
 LABEL maintainer="mingcheng<mingcheng@outlook.com>"
 
 ARG GITEA_TOKEN
@@ -11,13 +11,12 @@ ENV GOPROXY https://goproxy.cn,direct
 # Build
 COPY . ${BUILD_DIR}
 WORKDIR ${BUILD_DIR}
-RUN git config --global url."https://${GITEA_TOKEN}@repo.wooramel.cn/".insteadOf "https://repo.wooramel.cn/" \
- 	&& make clean build \
-	&& cp ./simplyddns /bin/simplyddns \
-	&& cp ./example/basic.yml /etc/simplyddns.yml
+RUN go install github.com/go-task/task/v3/cmd/task@latest && \
+    task build && \
+    cp ./simplyddns /bin/simplyddns
 
 # Stage2
-FROM debian:bullseye
+FROM debian:stable
 
 ENV TZ "Asia/Shanghai"
 RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list \
@@ -29,7 +28,6 @@ RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.li
 	&& apt -y autoremove
 
 COPY --from=builder /bin/simplyddns /bin/simplyddns
-COPY --from=builder /etc/simplyddns.yml /etc/simplyddns.yml
 
 USER nobody
 HEALTHCHECK --interval=30s --timeout=3s CMD nc -w 3 -zv 114.114.114.114 53 || exit 1

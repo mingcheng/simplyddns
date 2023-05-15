@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-func TestSourceIPezy(t *testing.T) {
-	fn, err := simplyddns.SourceFuncByName("ipezy")
+func TestSourceIpPlus360(t *testing.T) {
+	fn, err := simplyddns.SourceFuncByName("ipplus360")
 	assert.NoError(t, err)
 
 	ip, err := fn(context.TODO(), nil)
