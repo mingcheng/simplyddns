@@ -45,7 +45,7 @@ steps:
       dockerfile: Dockerfile
       tags:
         - latest
-        - 1.4.4
+        - 1.5.0
 
   - name: "push docker image to github"
     image: plugins/docker

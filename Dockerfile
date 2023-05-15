@@ -16,7 +16,7 @@ RUN go install github.com/go-task/task/v3/cmd/task@latest && \
     cp ./simplyddns /bin/simplyddns
 
 # Stage2
-FROM debian:bullseye
+FROM debian:stable
 
 ENV TZ "Asia/Shanghai"
 RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list \
