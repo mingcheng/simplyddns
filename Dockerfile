@@ -11,9 +11,10 @@ ENV GOPROXY https://goproxy.cn,direct
 # Build
 COPY . ${BUILD_DIR}
 WORKDIR ${BUILD_DIR}
-RUN go install github.com/go-task/task/v3/cmd/task@latest &&
-	task build &&
-	cp ./simplyddns /bin/simplyddns
+# RUN go install github.com/go-task/task/v3/cmd/task@latest &&
+# 	task build &&
+# 	cp ./simplyddns /bin/simplyddns
+RUN make build && cp ./simplyddns /bin/simplyddns
 
 # Stage2
 FROM debian:stable
