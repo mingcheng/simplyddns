@@ -1,0 +1,23 @@
+###
+# File: test.yaml
+# Author: Ming Cheng<mingcheng@outlook.com>
+#
+# Created Date: Tuesday, December 26th 2023, 9:40:59 pm
+# Last Modified: Tuesday, December 26th 2023, 9:41:11 pm
+#
+# https://opensource.org/licenses/MIT
+###
+
+name: ci
+
+on:
+  push:
+    branches:
+      - "develop"
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2

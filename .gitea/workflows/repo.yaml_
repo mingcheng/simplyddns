@@ -3,7 +3,7 @@
 # Author: Ming Cheng<mingcheng@outlook.com>
 #
 # Created Date: Tuesday, December 26th 2023, 9:18:36 pm
-# Last Modified: Tuesday, December 26th 2023, 9:35:44 pm
+# Last Modified: Tuesday, December 26th 2023, 9:40:22 pm
 #
 # https://opensource.org/licenses/MIT
 ###
@@ -30,6 +30,9 @@ jobs:
   push_to_registry:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
+    # defaults:
+    #   run:
+    #     working-directory: /repo
     # strategy:
     #   fail-fast: false
     #   matrix:
