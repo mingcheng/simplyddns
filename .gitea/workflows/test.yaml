@@ -3,7 +3,7 @@
 # Author: Ming Cheng<mingcheng@outlook.com>
 #
 # Created Date: Tuesday, December 26th 2023, 9:40:59 pm
-# Last Modified: Tuesday, December 26th 2023, 10:24:10 pm
+# Last Modified: Tuesday, December 26th 2023, 10:27:09 pm
 #
 # https://opensource.org/licenses/MIT
 ###
@@ -53,8 +53,8 @@ jobs:
         uses: huaweicloud/swr-login@v2.1.0
         with:
           region: cn-east-2
-          access-key-id: ${{ secrets.DOCKER_USERNAME }}
-          access-key-secret: ${{ secrets.DOCKER_PASSWORD }}
+          access-key-id: "HL5AS0J3YSCKFIIISZST"
+          access-key-secret: "fZXwIcc5txpaXMpBIR2fmXzFEMIUflmp3h3LGBdt"
 
       - name: Build Docker image for multiplatform
         uses: huaweicloud/swr-multiplatform-build-action@v1.2.0
