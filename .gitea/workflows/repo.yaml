@@ -3,7 +3,7 @@
 # Author: Ming Cheng<mingcheng@outlook.com>
 #
 # Created Date: Tuesday, December 26th 2023, 9:18:36 pm
-# Last Modified: Tuesday, December 26th 2023, 9:34:02 pm
+# Last Modified: Tuesday, December 26th 2023, 9:35:44 pm
 #
 # https://opensource.org/licenses/MIT
 ###
@@ -30,12 +30,12 @@ jobs:
   push_to_registry:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - linux/amd64
-          - linux/arm64
+    # strategy:
+    #   fail-fast: false
+    #   matrix:
+    #     platform:
+    #       - linux/amd64
+    #       - linux/arm64
 
     steps:
       - name: Check out the repo
@@ -47,11 +47,11 @@ jobs:
         # with:
         #   images: ${{ env.REGISTRY_IMAGE }}
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      # - name: Set up QEMU
+      #   uses: docker/setup-qemu-action@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      # - name: Set up Docker Buildx
+      #   uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -64,6 +64,6 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          # platforms: linux/amd64,linux/arm64
           push: false
           tags: mingcheng/simplyddns:latest
