@@ -3,7 +3,7 @@
 # Author: Ming Cheng<mingcheng@outlook.com>
 #
 # Created Date: Tuesday, December 26th 2023, 9:40:59 pm
-# Last Modified: Tuesday, December 26th 2023, 11:40:09 pm
+# Last Modified: Tuesday, December 26th 2023, 11:45:30 pm
 #
 # https://opensource.org/licenses/MIT
 ###
@@ -43,7 +43,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          platforms: linux/amd64,linux/arm64,linux/386,linux/mips64le
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ccr.ccs.tencentyun.com/mingcheng/simpleddns:20231226
