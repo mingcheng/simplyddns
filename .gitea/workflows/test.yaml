@@ -3,7 +3,7 @@
 # Author: Ming Cheng<mingcheng@outlook.com>
 #
 # Created Date: Tuesday, December 26th 2023, 9:40:59 pm
-# Last Modified: Tuesday, December 26th 2023, 10:27:22 pm
+# Last Modified: Tuesday, December 26th 2023, 10:27:56 pm
 #
 # https://opensource.org/licenses/MIT
 ###
@@ -18,8 +18,8 @@ on:
 jobs:
   docker:
     runs-on: ubuntu-latest
-    # container:
-    #   image: catthehacker/ubuntu:act-latest
+    container:
+      image: catthehacker/ubuntu:act-latest
 
     steps:
       - name: Check out the repo
