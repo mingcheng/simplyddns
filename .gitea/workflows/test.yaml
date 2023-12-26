@@ -3,7 +3,7 @@
 # Author: Ming Cheng<mingcheng@outlook.com>
 #
 # Created Date: Tuesday, December 26th 2023, 9:40:59 pm
-# Last Modified: Tuesday, December 26th 2023, 10:27:09 pm
+# Last Modified: Tuesday, December 26th 2023, 10:27:22 pm
 #
 # https://opensource.org/licenses/MIT
 ###
@@ -59,8 +59,8 @@ jobs:
       - name: Build Docker image for multiplatform
         uses: huaweicloud/swr-multiplatform-build-action@v1.2.0
         with:
-         image_tag: swr.cn-east-2.myhuaweicloud.com/mingcheng/simplyddns:20231226
-         platforms: linux/amd64,linux/arm64/v8,windows/amd64
-         use_latest_buildx: false
-         push: true
-         file: ./Dockerfile
+          image_tag: swr.cn-east-2.myhuaweicloud.com/mingcheng/simplyddns:20231226
+          platforms: linux/amd64,linux/arm64/v8,windows/amd64
+          use_latest_buildx: false
+          push: true
+          file: ./Dockerfile
