@@ -3,7 +3,7 @@
 # Author: Ming Cheng<mingcheng@outlook.com>
 #
 # Created Date: Tuesday, December 26th 2023, 9:40:59 pm
-# Last Modified: Tuesday, December 26th 2023, 11:45:39 pm
+# Last Modified: Tuesday, December 26th 2023, 11:53:28 pm
 #
 # https://opensource.org/licenses/MIT
 ###
@@ -40,10 +40,13 @@ jobs:
           password: ${{ secrets.TCR_PASSWORD }}
           registry: ccr.ccs.tencentyun.com
 
+      - id: commit
+        uses: prompt/actions-commit-hash@v3
+
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ccr.ccs.tencentyun.com/mingcheng/simpleddns:latest
+            ccr.ccs.tencentyun.com/mingcheng/simpleddns:${{ steps.commit.outputs.short }}
