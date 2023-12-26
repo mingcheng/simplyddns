@@ -2,6 +2,10 @@ name: Go
 
 on: [push]
 
+env:
+  GOPRIVATE: '.github.com,.segmentfault.com,repo.wooramel.cn'
+  GOPROXY: 'https://goproxy.cn,direct'
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,4 +23,4 @@ jobs:
       - name: Display Go version
         run: go version
       - name: Build by make program
-        run: make clean build
+        run: make build

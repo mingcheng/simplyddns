@@ -9,7 +9,7 @@ GO_ENV=CGO_ENABLED=0
 GO_FLAGS=-ldflags="-X main.BuildVersion=$(VERSION) -X 'main.BuildTime=`date`' -extldflags -static"
 GO=$(GO_ENV) $(shell which go)
 
-build: test $(DIR_SRC)/main.go
+build: $(DIR_SRC)/main.go
 	@$(GO_ENV) $(GO) build $(GO_FLAGS) -o $(BIN) $(DIR_SRC)
 
 darwin_universal: test $(DIR_SRC)/main.go
@@ -18,7 +18,7 @@ darwin_universal: test $(DIR_SRC)/main.go
 	@lipo -create -output $(BIN) $(BIN)_arm64 $(BIN)_amd64
 	@rm -f $(BIN)_arm64 $(BIN)_amd64
 
-build_docker_image: test clean
+build_docker_image: clean
 	@$(DOCKER_CMD) build -f ./Dockerfile -t simplyddns:$(VERSION) .
 
 install: build
