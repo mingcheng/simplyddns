@@ -1,13 +1,14 @@
-name: schedule
-
+#name: schedule
+---
 on:
   schedule:
     - cron: '*/1 * * * *'
-  push:
-    branches:
-      - 'develop'
+#  push:
+#    branches:
+#      - 'develop'
 jobs:
-  schedule:
+  check:
     runs-on: ubuntu-latest
+    #    container: catthehacker/ubuntu:act-latest
     steps:
       - run: echo "Hello, World!"
