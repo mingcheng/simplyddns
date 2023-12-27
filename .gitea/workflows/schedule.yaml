@@ -1,4 +1,3 @@
-#name: schedule
 ---
 on:
   schedule:
@@ -6,9 +5,11 @@ on:
 #  push:
 #    branches:
 #      - 'develop'
+
 jobs:
   check:
     runs-on: ubuntu-latest
-    #    container: catthehacker/ubuntu:act-latest
+    container: catthehacker/ubuntu:act-latest
     steps:
-      - run: echo "Hello, World!"
+      - run: |
+          echo "Hello, World!"
