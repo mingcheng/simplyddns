@@ -26,12 +26,13 @@ on:
     #   - "develop"
 
 jobs:
-  docker:
+  test:
     runs-on: ubuntu-latest
-    container:
-      image: golang:latest
     steps:
-      # - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.x'
       - run: go version
       - run: go env
       - run: make test

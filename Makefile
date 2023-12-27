@@ -1,4 +1,4 @@
-.PHONY: build clean test test-race
+.PHONY: build clean test act darwin_universal
 
 VERSION=1.4.4
 BIN=simplyddns
@@ -31,5 +31,9 @@ test:
 clean:
 	@$(GO) clean ./...
 	@rm -f $(BIN)
+
+#https://github.com/nektos/act
+act:
+	@act -W ./.gitea/workflows --container-architecture linux/amd64 --pull=false -j build
 
 all: clean test build
