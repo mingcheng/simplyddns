@@ -3,6 +3,10 @@ name: build
 on:
   push:
 
+env:
+  GOPRIVATE: ".github.com,repo.wooramel.cn"
+  GOPROXY: "https://goproxy.cn,direct"
+
 jobs:
   build:
     runs-on: ubuntu-latest

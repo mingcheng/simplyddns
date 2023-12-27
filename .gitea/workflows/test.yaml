@@ -1,0 +1,37 @@
+###
+# File: test.yaml
+# Author: Ming Cheng<mingcheng@outlook.com>
+#
+# Created Date: Wednesday, December 27th 2023, 9:33:00 am
+# Last Modified: Wednesday, December 27th 2023, 9:36:29 am
+#
+# https://opensource.org/licenses/MIT
+###
+
+###
+# File: test.yaml
+# Author: Ming Cheng<mingcheng@outlook.com>
+#
+# Created Date: Tuesday, December 26th 2023, 9:40:59 pm
+# Last Modified: Tuesday, December 26th 2023, 11:53:28 pm
+#
+# https://opensource.org/licenses/MIT
+###
+
+name: ci
+
+on:
+  push:
+    # branches:
+    #   - "develop"
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    container:
+      image: golang:latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: go version
+      - run: go env
+      - run: make test
