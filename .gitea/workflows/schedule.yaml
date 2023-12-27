@@ -3,7 +3,9 @@ name: schedule
 on:
   schedule:
     - cron: '*/1 * * * *'
-
+  push:
+    branches:
+      - 'develop'
 jobs:
   schedule:
     runs-on: ubuntu-latest
