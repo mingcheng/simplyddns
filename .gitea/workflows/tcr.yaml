@@ -8,16 +8,7 @@
 # https://opensource.org/licenses/MIT
 ###
 
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
-# GitHub recommends pinning actions to a commit SHA.
-# To get a newer version, you will need to update the SHA.
-# You can also reference a tag or branch, but the action may change without warning.
-
-name: Publish Docker Image To Tencentyun
+name: build an image and push it to registry
 
 on:
   push:
@@ -28,7 +19,6 @@ on:
 jobs:
   push_to_registry:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
       - id: commit
@@ -44,14 +34,6 @@ jobs:
           username: ${{ secrets.TCR_USERNAME }}
           password: ${{ secrets.TCR_PASSWORD }}
           registry: ccr.ccs.tencentyun.com
-      # - uses: docker/login-action@v3
-      #   with:
-      #     username: ${{ secrets.DOCKER_USERNAME }}
-      #     password: ${{ secrets.DOCKER_PASSWORD }}
-      #     registry: swr.cn-east-2.myhuaweicloud.com
-      # swr.cn-east-2.myhuaweicloud.com/mingcheng/simplyddns:latest
-      # swr.cn-east-2.myhuaweicloud.com/mingcheng/simplyddns:${{ steps.commit.outputs.short }}
-
       - uses: docker/build-push-action@v5
         with:
           platforms: linux/amd64,linux/arm64

@@ -11,6 +11,8 @@
 name: test external proxies
 
 on:
+  schedule:
+    - cron: '*/12 * * * *'
   push:
     branches:
       - "develop"
