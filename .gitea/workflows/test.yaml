@@ -8,22 +8,12 @@
 # https://opensource.org/licenses/MIT
 ###
 
-###
-# File: test.yaml
-# Author: Ming Cheng<mingcheng@outlook.com>
-#
-# Created Date: Tuesday, December 26th 2023, 9:40:59 pm
-# Last Modified: Tuesday, December 26th 2023, 11:53:28 pm
-#
-# https://opensource.org/licenses/MIT
-###
-
-name: ci
+name: test external proxies
 
 on:
   push:
-    # branches:
-    #   - "develop"
+    branches:
+      - "develop"
 
 jobs:
   test:
@@ -33,6 +23,5 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: '1.21.x'
-      - run: go version
       - run: go env
       - run: make test
