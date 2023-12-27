@@ -3,7 +3,7 @@
 # Author: Ming Cheng<mingcheng@outlook.com>
 #
 # Created Date: Tuesday, December 26th 2023, 9:18:36 pm
-# Last Modified: Wednesday, December 27th 2023, 9:22:57 am
+# Last Modified: Wednesday, December 27th 2023, 9:30:37 am
 #
 # https://opensource.org/licenses/MIT
 ###
@@ -17,7 +17,7 @@
 # To get a newer version, you will need to update the SHA.
 # You can also reference a tag or branch, but the action may change without warning.
 
-name: Publish Docker Image To Tencentyun and HuaweiCloud
+name: Publish Docker Image To Tencentyun
 
 on:
   push:
@@ -45,11 +45,13 @@ jobs:
           username: ${{ secrets.TCR_USERNAME }}
           password: ${{ secrets.TCR_PASSWORD }}
           registry: ccr.ccs.tencentyun.com
-      - uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-          registry: swr.cn-east-2.myhuaweicloud.com
+      # - uses: docker/login-action@v3
+      #   with:
+      #     username: ${{ secrets.DOCKER_USERNAME }}
+      #     password: ${{ secrets.DOCKER_PASSWORD }}
+      #     registry: swr.cn-east-2.myhuaweicloud.com
+      # swr.cn-east-2.myhuaweicloud.com/mingcheng/simplyddns:latest
+      # swr.cn-east-2.myhuaweicloud.com/mingcheng/simplyddns:${{ steps.commit.outputs.short }}
 
       - uses: docker/build-push-action@v5
         with:
@@ -58,5 +60,3 @@ jobs:
           tags: |
             ccr.ccs.tencentyun.com/mingcheng/simpleddns:latest
             ccr.ccs.tencentyun.com/mingcheng/simpleddns:${{ steps.commit.outputs.short }}
-            swr.cn-east-2.myhuaweicloud.com/mingcheng/simplyddns:latest
-            swr.cn-east-2.myhuaweicloud.com/mingcheng/simplyddns:${{ steps.commit.outputs.short }}
