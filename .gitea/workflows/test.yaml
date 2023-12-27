@@ -3,7 +3,7 @@
 # Author: Ming Cheng<mingcheng@outlook.com>
 #
 # Created Date: Wednesday, December 27th 2023, 9:33:00 am
-# Last Modified: Wednesday, December 27th 2023, 9:36:29 am
+# Last Modified: Wednesday, December 27th 2023, 9:38:20 am
 #
 # https://opensource.org/licenses/MIT
 ###
@@ -31,7 +31,7 @@ jobs:
     container:
       image: golang:latest
     steps:
-      - uses: actions/checkout@v4
+      # - uses: actions/checkout@v4
       - run: go version
       - run: go env
       - run: make test
