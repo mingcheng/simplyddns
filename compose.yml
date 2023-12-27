@@ -5,6 +5,7 @@ services:
     build:
       context: .
     restart: unless-stopped
+    network_mode: host
     environment:
       TZ: "Asia/Shanghai"
     volumes:

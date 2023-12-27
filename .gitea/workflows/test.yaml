@@ -8,14 +8,14 @@
 # https://opensource.org/licenses/MIT
 ###
 
-name: test external proxies
+name: test golang external proxies
 
 on:
   schedule:
-    - cron: '*/12 * * * *'
-  push:
-    branches:
-      - "develop"
+    - cron: '* */12 * * *'
+#  push:
+#    branches:
+#      - "develop"
 
 jobs:
   test:
