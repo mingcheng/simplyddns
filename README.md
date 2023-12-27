@@ -1,7 +1,5 @@
 # Simply DDNS
 
-[![Build Status](https://ci.wooramel.cn/api/badges/mingcheng/simplyddns/status.svg)](https://ci.wooramel.cn/mingcheng/simplyddns)
-
 根据指定的 IP 地址，更新对应的 DNS 记录。
 
 ## 思路
