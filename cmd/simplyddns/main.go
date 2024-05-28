@@ -1,13 +1,18 @@
-/**
+/*!*
+ * Copyright (c) 2025 Hangzhou Guanwaii Technology Co,.Ltd.
+ *
+ * This source code is licensed under the MIT License,
+ * which is located in the LICENSE file in the source tree's root directory.
+ *
  * File: main.go
- * Author: Ming Cheng<mingcheng@outlook.com>
+ * Author: mingcheng@outlook.com
+ * File Created: Friday, December 25th 2020, 9:43:56 pm
  *
- * Created Date: Friday, December 25th 2020, 9:43:56 pm
- * Last Modified: Sunday, December 27th 2020, 8:38:36 pm
- *
- * http://www.opensource.org/licenses/MIT
+ * Modified By: mingcheng (mingcheng@apache.org)
+ * Last Modified: 2025-03-12 14:35:10
  */
 
+// simplyddns is a simple dynamic DNS client
 package main
 
 import (

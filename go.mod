@@ -12,7 +12,7 @@ require (
 	github.com/namedotcom/go v0.0.0-20180403034216-08470befbe04
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/viper v1.15.0
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.14.4
 	golang.org/x/net v0.37.0
 )
