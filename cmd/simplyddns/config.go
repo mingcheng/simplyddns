@@ -1,11 +1,15 @@
-/**
+/*!*
+ * Copyright (c) 2025 Hangzhou Guanwaii Technology Co,.Ltd.
+ *
+ * This source code is licensed under the MIT License,
+ * which is located in the LICENSE file in the source tree's root directory.
+ *
  * File: config.go
- * Author: Ming Cheng<mingcheng@outlook.com>
+ * Author: mingcheng@outlook.com
+ * File Created: Saturday, December 26th 2020, 11:39:12 am
  *
- * Created Date: Saturday, December 26th 2020, 11:39:12 am
- * Last Modified: Sunday, December 27th 2020, 8:38:22 pm
- *
- * http://www.opensource.org/licenses/MIT
+ * Modified By: mingcheng (mingcheng@apache.org)
+ * Last Modified: 2025-03-12 14:36:04
  */
 
 package main

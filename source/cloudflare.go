@@ -7,8 +7,6 @@ import (
 	"regexp"
 )
 
-//ip=103.135.249.59
-
 func init() {
 	const Name = "cloudflare"
 

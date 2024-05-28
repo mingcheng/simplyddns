@@ -1,3 +1,17 @@
+/*!*
+ * Copyright (c) 2025 Hangzhou Guanwaii Technology Co,.Ltd.
+ *
+ * This source code is licensed under the MIT License,
+ * which is located in the LICENSE file in the source tree's root directory.
+ *
+ * File: config_test.go
+ * Author: mingcheng@outlook.com
+ * File Created: Saturday, December 26th 2020
+ *
+ * Modified By: mingcheng (mingcheng@apache.org)
+ * Last Modified: 2025-03-12 14:36:30
+ */
+
 package main
 
 import (
