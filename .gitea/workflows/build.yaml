@@ -9,7 +9,7 @@
 # File Created: 2025-02-28 10:52:26
 #
 # Modified By: mingcheng (mingcheng@apache.org)
-# Last Modified: 2025-03-12 13:44:31
+# Last Modified: 2025-03-12 13:47:23
 ##
 
 name: build
@@ -28,11 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-<<<<<<< HEAD
         go-version: ["1.22", "1.23", "1.24"]
-=======
-        go-version: [ "1.20", "1.21", "1.22" ]
->>>>>>> da5b87a (update the test items)
 
     steps:
       - uses: actions/checkout@v4
@@ -40,7 +36,6 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go-version }}
-<<<<<<< HEAD
       - run: |
           env
           id
@@ -48,7 +43,3 @@ jobs:
           go version
           go env
           make build
-=======
-      - run: go env
-      - run: make build
->>>>>>> da5b87a (update the test items)
