@@ -6,7 +6,7 @@ on:
       - develop
 
 env:
-  GOPRIVATE: ".github.com,repo.wooramel.cn"
+  GOPRIVATE: ".github.com,git.guanwaii.com"
   GOPROXY: "https://goproxy.cn,direct"
 
 jobs:
@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Go ${{ matrix.go-version }}
+      - name: set go with version ${{ matrix.go-version }}
         uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go-version }}
