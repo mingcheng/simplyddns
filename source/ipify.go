@@ -12,7 +12,7 @@ package source
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 
@@ -30,7 +30,7 @@ func init() {
 			return nil, err
 		}
 
-		ip, err := ioutil.ReadAll(resp.Body)
+		ip, err := io.ReadAll(resp.Body)
 
 		if err != nil {
 			log.Debug(err)

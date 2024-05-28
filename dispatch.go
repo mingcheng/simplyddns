@@ -1,11 +1,15 @@
-/**
+/*!*
+ * Copyright (c) 2025 Hangzhou Guanwaii Technology Co,.Ltd.
+ *
+ * This source code is licensed under the MIT License,
+ * which is located in the LICENSE file in the source tree's root directory.
+ *
  * File: dispatch.go
- * Author: Ming Cheng<mingcheng@outlook.com>
+ * Author: mingcheng (mingcheng@apache.org)
+ * File Created: Friday, December 25th 2020, 10:46:17 pm
  *
- * Created Date: Friday, December 25th 2020, 10:46:17 pm
- * Last Modified: Sunday, December 27th 2020, 8:39:40 pm
- *
- * http://www.opensource.org/licenses/MIT
+ * Modified By: mingcheng (mingcheng@apache.org)
+ * Last Modified: 2025-03-12 13:39:40
  */
 
 package simplyddns
