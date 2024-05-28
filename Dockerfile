@@ -1,9 +1,6 @@
 FROM golang:1.21 AS builder
 LABEL maintainer="mingcheng<mingcheng@outlook.com>"
 
-ARG GITEA_TOKEN
-ENV GITEA_TOKEN ${GITEA_TOKEN}
-
 ENV PACKAGE github.com/mingcheng/simplyddns
 ENV BUILD_DIR ${GOPATH}/src/${PACKAGE}
 ENV GOPROXY https://goproxy.cn,direct

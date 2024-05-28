@@ -12,7 +12,11 @@ name: test golang external proxies
 
 on:
   schedule:
-    - cron: '* */12 * * *'
+    - cron: '30 2 * * *'
+  push:
+    branches:
+      - master
+      - main
 
 jobs:
   test:
