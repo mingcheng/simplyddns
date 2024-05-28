@@ -1,6 +1,6 @@
 module github.com/mingcheng/simplyddns
 
-go 1.23
+go 1.24
 
 require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.62.318
@@ -20,6 +20,8 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
+	github.com/goccy/go-json v0.10.5 // indirect
+	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
