@@ -1,0 +1,39 @@
+/**
+ * File: ipsb.go
+ * Author: Ming Cheng<mingcheng@outlook.com>
+ *
+ * Created Date: Saturday, December 26th 2020, 10:41:38 pm
+ * Last Modified: Sunday, December 27th 2020, 7:35:13 pm
+ *
+ * http://www.opensource.org/licenses/MIT
+ */
+
+package source
+
+import (
+	"context"
+	"github.com/mingcheng/simplyddns"
+	"net"
+	"strings"
+)
+
+func init() {
+	const Name = "ip.sb"
+	fn := func(ctx context.Context, _ *simplyddns.SourceConfig) (*net.IP, error) {
+
+		log.Debugf("%s start requests", Name)
+		ip, err := RawStrByURL(ctx, "http://ip.sb", map[string]string{
+			"User-Agent": UserAgentCurl,
+		})
+		if err != nil {
+			log.Debug(err)
+			return nil, err
+		}
+
+		addr := net.ParseIP(strings.TrimSpace(ip))
+		log.Debugf("%s remote address is %s", Name, addr.String())
+		return &addr, nil
+	}
+
+	_ = simplyddns.RegisterSourceFunc("ipsb", fn)
+}
