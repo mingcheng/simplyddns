@@ -1,10 +1,11 @@
 module github.com/mingcheng/simplyddns
 
-go 1.20
+go 1.23
 
 require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.62.318
 	github.com/go-resty/resty/v2 v2.7.0
+	github.com/ipinfo/go/v2 v2.10.0
 	github.com/jpillora/go-tld v1.2.1
 	github.com/judwhite/go-svc v1.2.1
 	github.com/namedotcom/go v0.0.0-20180403034216-08470befbe04
@@ -27,6 +28,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b // indirect
+	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml/v2 v2.0.7 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -37,6 +39,7 @@ require (
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
+	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
