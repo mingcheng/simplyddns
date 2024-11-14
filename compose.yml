@@ -4,8 +4,8 @@ services:
   simplyddns:
     build:
       context: .
-    image: ghcr.io/mingcheng/simplyddns:1.4.2
     restart: unless-stopped
+    network_mode: host
     environment:
       TZ: "Asia/Shanghai"
     volumes:

@@ -1,7 +1,5 @@
 # Simply DDNS
 
-[![Build Status](https://ci.wooramel.cn/api/badges/mingcheng/simplyddns/status.svg)](https://ci.wooramel.cn/mingcheng/simplyddns)
-
 根据指定的 IP 地址，更新对应的 DNS 记录。
 
 ## 思路
@@ -13,7 +11,6 @@
 3. 作为服务端需要更加详细的日志，并能回传需要的信息。
 
 加上这块其实是强需求（大家都知道建站的时候，其实最后一部就是更改 DNS，非常的麻烦而且容易出错）。
-
 于是就有了这个应用，可能相对而言可能有比较高的配置门槛，但是有更多的灵活性。
 
 ### 概念
@@ -25,7 +22,6 @@
 ## 安装
 
 出于安全方面的考虑暂时不提供二进制可执行文件，如果您需要自己编译生成二进制文件，可以直接参考 Makefile 文件中的配置。
-
 通常而言 `make build` 是个非常不错的选择，默认情况下运行它以后（当然，需要 Golang 开发环境）就可以在当前目录下生成对应的可执行文件。
 
 ### docker-compose
@@ -50,9 +46,8 @@ ddns:
       type: "sleep"
 ```
 
-这个配置文件的其中含义就是从 lo 模块中获取 IP 地址后，传给 sleep 的 target 去执行。
-
-因为 sleep 的 target 除了 sleep 几秒以外，其实什么都不干但由此可以看出 SimplyDDNS 的工作机制。
+这个配置文件的其中含义就是从 lo 模块中获取 IP 地址后，传给 sleep 的 target 去执行。 因为 sleep 的 target 除了 sleep
+几秒以外，其实什么都不干但由此可以看出 SimplyDDNS 的工作机制。
 
 ### Webhook
 
