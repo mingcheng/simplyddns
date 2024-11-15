@@ -162,26 +162,27 @@ func (a *AliDNS) CreateRecord(domain string, ip *net.IP) (*alidns.AddDomainRecor
 	return a.Client.AddDomainRecord(request)
 }
 
-// init to register the function to dispather
+// init to register the function to dispatcher
 func init() {
-	_ = simplyddns.RegisterTargetFunc("alidns", func(ctx context.Context, ip *net.IP, config *simplyddns.TargetConfig) error {
-		var (
-			err    error
-			client *AliDNS
-		)
+	_ = simplyddns.RegisterTargetFunc("alidns",
+		func(ctx context.Context, ip *net.IP, config *simplyddns.TargetConfig) error {
+			var (
+				err    error
+				client *AliDNS
+			)
 
-		if client, err = NewAliDNS(config); err != nil {
-			return err
-		}
-
-		for _, domain := range config.Domains {
-			if record, _ := client.GetRecord(domain); record != nil {
-				_, err = client.UpdateRecord(domain, ip)
-			} else {
-				_, err = client.CreateRecord(domain, ip)
+			if client, err = NewAliDNS(config); err != nil {
+				return err
 			}
-		}
 
-		return err
-	})
+			for _, domain := range config.Domains {
+				if record, _ := client.GetRecord(domain); record != nil {
+					_, err = client.UpdateRecord(domain, ip)
+				} else {
+					_, err = client.CreateRecord(domain, ip)
+				}
+			}
+
+			return err
+		})
 }

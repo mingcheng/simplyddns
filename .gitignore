@@ -32,3 +32,6 @@ coverage.html
 .*~
 /.vscode/*.log
 /.task/*
+
+/simplyddns
+/*.txt
