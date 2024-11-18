@@ -17,6 +17,7 @@ func init() {
 	fn := func(ctx context.Context, _ *simplyddns.SourceConfig) (*net.IP, error) {
 		data, err := RawStrByURL(context.Background(), `https://update.cz88.net/api/cz88/ip/geo?ip=`, map[string]string{
 			"Accept":     "application/json",
+			"Referer":    "https://update.cz88.net/geo",
 			"User-Agent": UserAgentCurl,
 		})
 
