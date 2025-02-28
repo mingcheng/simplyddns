@@ -1,18 +1,22 @@
-###
+#!#
+# Copyright (c) 2025 Hangzhou Guanwaii Technology Co,.Ltd.
+#
+# This source code is licensed under the MIT License,
+# which is located in the LICENSE file in the source tree's root directory.
+#
 # File: test.yaml
-# Author: Ming Cheng<mingcheng@outlook.com>
+# Author: mingcheng (mingcheng@apache.org)
+# File Created: 2025-02-28 10:52:26
 #
-# Created Date: Wednesday, December 27th 2023, 9:33:00 am
-# Last Modified: Wednesday, December 27th 2023, 9:38:20 am
-#
-# https://opensource.org/licenses/MIT
-###
+# Modified By: mingcheng (mingcheng@apache.org)
+# Last Modified: 2025-02-28 10:57:07
+##
 
 name: test golang external proxies
 
 on:
   schedule:
-    - cron: '30 2 * * *'
+    - cron: "30 2 * * *"
   push:
     branches:
       - master
@@ -25,6 +29,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
         with:
-          go-version: '1.21.x'
+          go-version: "1.21.x"
       - run: go env
       - run: make test

@@ -1,12 +1,16 @@
-###
+#!#
+# Copyright (c) 2024-2025 Hangzhou Guanwaii Technology Co,.Ltd.
+#
+# This source code is licensed under the MIT License,
+# which is located in the LICENSE file in the source tree's root directory.
+#
 # File: tcr.yaml
-# Author: Ming Cheng<mingcheng@outlook.com>
+# Author: mingcheng (mingcheng@apache.org)
+# File Created: 2024-11-15 14:46:48
 #
-# Created Date: Tuesday, December 26th 2023, 9:18:36 pm
-# Last Modified: Wednesday, December 27th 2023, 9:32:30 am
-#
-# https://opensource.org/licenses/MIT
-###
+# Modified By: mingcheng (mingcheng@apache.org)
+# Last Modified: 2025-02-28 10:57:18
+##
 
 name: build an image and push it to registry
 

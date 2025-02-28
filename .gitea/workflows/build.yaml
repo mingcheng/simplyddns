@@ -1,3 +1,17 @@
+#!#
+# Copyright (c) 2025 Hangzhou Guanwaii Technology Co,.Ltd.
+#
+# This source code is licensed under the MIT License,
+# which is located in the LICENSE file in the source tree's root directory.
+#
+# File: build.yaml
+# Author: mingcheng (mingcheng@apache.org)
+# File Created: 2025-02-28 10:52:26
+#
+# Modified By: mingcheng (mingcheng@apache.org)
+# Last Modified: 2025-02-28 10:57:23
+##
+
 name: build
 
 on:
@@ -14,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ["1.21", "1.22", "1.23"]
+        go-version: ["1.22", "1.23", "1.24"]
 
     steps:
       - uses: actions/checkout@v4
