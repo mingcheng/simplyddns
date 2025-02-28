@@ -10,6 +10,8 @@
 - [FAQ](#faq)
   - [WebHook Configuration](#webhook-configuration)
 
+SimplyDDNS is a universal DDNS tool that can be used to update domain name records based on obtained IP addresses. It is designed to be flexible and easy to extend. We also privide the Chinese version of this README file, see [README_ZH.md](README_ZH.md).
+
 This tool simply monitors and updates domain name records based on obtained IP addresses. [While there are similar existing projects](https://github.com/mingcheng/ddns-go) that are already very useful, there were several points that didn't meet my personal expectations and requirements:
 
 1. I don't need a UI interface; instead, I prefer a fully functional configuration file
