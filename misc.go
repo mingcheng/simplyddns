@@ -1,11 +1,15 @@
-/**
+/*!*
+ * Copyright (c) 2022-2025 Hangzhou Guanwaii Technology Co,.Ltd.
+ *
+ * This source code is licensed under the MIT License,
+ * which is located in the LICENSE file in the source tree's root directory.
+ *
  * File: misc.go
- * Author: Ming Cheng<mingcheng@outlook.com>
+ * Author: mingcheng (mingcheng@apache.org)
+ * File Created: 2022-07-22 23:37:43
  *
- * Created Date: Saturday, December 26th 2020, 7:21:58 pm
- * Last Modified: Sunday, December 27th 2020, 8:40:05 pm
- *
- * http://www.opensource.org/licenses/MIT
+ * Modified By: mingcheng (mingcheng@apache.org)
+ * Last Modified: 2025-02-28 10:45:23
  */
 
 package simplyddns

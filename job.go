@@ -1,11 +1,15 @@
-/**
+/*!*
+ * Copyright (c) 2022-2025 Hangzhou Guanwaii Technology Co,.Ltd.
+ *
+ * This source code is licensed under the MIT License,
+ * which is located in the LICENSE file in the source tree's root directory.
+ *
  * File: job.go
- * Author: Ming Cheng<mingcheng@outlook.com>
+ * Author: mingcheng (mingcheng@apache.org)
+ * File Created: 2022-07-22 23:37:43
  *
- * Created Date: Friday, December 25th 2020, 10:45:54 pm
- * Last Modified: Wednesday, July 13th 2022, 12:26:13 pm
- *
- * http://www.opensource.org/licenses/MIT
+ * Modified By: mingcheng (mingcheng@apache.org)
+ * Last Modified: 2025-02-28 10:46:31
  */
 
 package simplyddns
@@ -20,6 +24,7 @@ import (
 	"time"
 )
 
+// SourceFunc to define the source function
 type SourceConfig struct {
 	Interval uint   `yaml:"interval,omitempty"`
 	Type     string `yaml:"type,omitempty"`
@@ -27,6 +32,7 @@ type SourceConfig struct {
 	Content  string `yaml:"content"`
 }
 
+// TargetFunc to define the target function
 type TargetConfig struct {
 	Type    string   `yaml:"type,omitempty"`
 	Key     string   `yaml:"key,omitempty"`
@@ -35,6 +41,7 @@ type TargetConfig struct {
 	Domains []string `yaml:"domains,omitempty"`
 }
 
+// WebHook to define the webhook
 type WebHook struct {
 	Url      string `yaml:"url" mapstructure:"url"`
 	Token    string `yaml:"token" mapstructure:"token"`
@@ -42,12 +49,14 @@ type WebHook struct {
 	Password string `yaml:"token" mapstructure:"password"`
 }
 
+// JobConfig to define the job configure
 type JobConfig struct {
 	WebHook WebHook      `yaml:"webhook" mapstructure:"webhook"`
 	Source  SourceConfig `yaml:"source,omitempty" mapstructure:"source"`
 	Target  TargetConfig `yaml:"target,omitempty" mapstructure:"target"`
 }
 
+// Job to define the job
 type Job struct {
 	Config     *JobConfig
 	SourceFunc []SourceFunc

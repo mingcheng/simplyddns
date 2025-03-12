@@ -1,0 +1,28 @@
+#!#
+# Copyright (c) 2024 Hangzhou Guanwaii Technology Co,.Ltd.
+#
+# This source code is licensed under the MIT License,
+# which is located in the LICENSE file in the source tree's root directory.
+#
+# File: cloudflare.yml
+# Author: mingcheng (mingcheng@apache.org)
+# File Created: 2024-11-15 14:09:07
+#
+# Modified By: mingcheng (mingcheng@apache.org)
+# Last Modified: 2024-11-15 14:17:23
+##
+
+logfile: /dev/stdout
+debug: True
+
+ddns:
+  - source:
+      type: cloudflare
+      interval: 3600
+    target:
+      type: cloudflare
+      key:
+      token:
+      domains:
+        - 1.intkd.com
+        - 2.intkd.com

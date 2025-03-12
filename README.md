@@ -1,42 +1,49 @@
-# Simply DDNS
+# Simply DDNS - Yet Another Universal DDNS Tools
 
-根据指定的 IP 地址，更新对应的 DNS 记录。
+- [Concepts](#concepts)
+- [Installation](#installation)
+  - [docker-compose](#docker-compose)
+- [Configuration](#configuration)
+- [Extensions](#extensions)
+  - [source](#source)
+  - [target](#target)
+- [FAQ](#faq)
+  - [WebHook Configuration](#webhook-configuration)
 
-## 思路
+SimplyDDNS is a universal DDNS tool that can be used to update domain name records based on obtained IP addresses. It is designed to be flexible and easy to extend. We also privide the Chinese version of this README file, see [README_ZH.md](README_ZH.md).
 
-[其实我看到已经有对应的类似的项目](https://github.com/mingcheng/ddns-go)，已经是非常的好用。但是，有几点不符合我个人的期望以及要求：
+This tool simply monitors and updates domain name records based on obtained IP addresses. [While there are similar existing projects](https://github.com/mingcheng/ddns-go) that are already very useful, there were several points that didn't meet my personal expectations and requirements:
 
-1. 我不需要个 UI 界面，对应的我其实更想要的是个全功能的配置文件；
-2. 需要更多的灵活性，而且可以自由的搭配配置；
-3. 作为服务端需要更加详细的日志，并能回传需要的信息。
+1. I don't need a UI interface; instead, I prefer a fully functional configuration file
+2. Need more flexibility and freedom in configuration combinations
+3. As a server-side application, more detailed logging and ability to transmit required information
 
-加上这块其实是强需求（大家都知道建站的时候，其实最后一部就是更改 DNS，非常的麻烦而且容易出错）。
-于是就有了这个应用，可能相对而言可能有比较高的配置门槛，但是有更多的灵活性。
+Since this is actually a strong requirement (everyone knows that when setting up a website, the last step is changing DNS, which is very troublesome and error-prone),
+this application was created. While it may have a relatively higher configuration threshold, it offers more flexibility.
 
-### 概念
+## Concepts
 
-[将 DDNS 动态注册 DNS](https://en.wikipedia.org/wiki/Dynamic_DNS) 的行为抽象为两种：一种为如何获取 IP 地址、另外一种为如何配置 DNS，简单的将如下图所示：
+[Dynamic DNS registration (DDNS)](https://en.wikipedia.org/wiki/Dynamic_DNS) behavior is abstracted into two types: how to obtain IP addresses and how to configure DNS.
 
-因此，主要实现了这个两个接口，并且对应上配置就可以灵活的搭配以及运行，详细参见扩展章节。
+Therefore, by implementing these two interfaces and matching them with configurations, you can flexibly arrange and run them. See the Extensions section for details.
 
-## 安装
+## Installation
 
-出于安全方面的考虑暂时不提供二进制可执行文件，如果您需要自己编译生成二进制文件，可以直接参考 Makefile 文件中的配置。
-通常而言 `make build` 是个非常不错的选择，默认情况下运行它以后（当然，需要 Golang 开发环境）就可以在当前目录下生成对应的可执行文件。
+For security considerations, binary executables are not provided at this time. If you need to compile the binary yourself, you can refer to the configuration in the Makefile.
+
+Usually, `make build` is a very good choice. After running it (of course, requiring the Golang development environment), you can generate the corresponding executable file in the current directory.
 
 ### docker-compose
 
-推荐您使用容器的方式运行本应用，在本程序中还提供了 docker-compose.yml 以及 Dockerfile 文件，方便构建和运行镜像。
+It's recommended to run this application using containers. The program provides compose.yml and Dockerfile files for easy image building and running.
 
-// @TODO
+## Configuration
 
-## 配置
-
-详细的配置文件例子在 example 目录中，具体可以参考详细的 Yaml 文件。下面举个非常简单的例子（来自 basic.yml）文件：
+Detailed configuration file examples are in the example directory. Here's a very simple example (from basic.yml):
 
 ```yaml
 logfile: "/dev/stderr"
-debug: Yes
+debug: True
 
 ddns:
   - source:
@@ -46,54 +53,53 @@ ddns:
       type: "sleep"
 ```
 
-这个配置文件的其中含义就是从 lo 模块中获取 IP 地址后，传给 sleep 的 target 去执行。 因为 sleep 的 target 除了 sleep
-几秒以外，其实什么都不干但由此可以看出 SimplyDDNS 的工作机制。
+This configuration file means getting the IP address from the lo module and passing it to the sleep target for execution. The sleep target does nothing except sleep for a few seconds, but this demonstrates SimplyDDNS's working mechanism.
 
-### Webhook
+## Extensions
 
-## 扩展
+Extending SimplyDDNS is very easy. You can refer to the corresponding files in the source and target directories. The simplest ones are `lo.go` and `sleep.go` in the target directory, as they don't do anything practical.
 
-扩展 SimplyDDNS 其实非常的容易，可以分别参考 source 以及 target 中对应的文件即可，比较简单的是 `lo.go` 以及 target 目录中的 `sleep.go` 文件，因为它们并不做任何实际的事情。
-
-### 已实现模块
-
-#### source
+### source
 
 _lo_
 
-这个模块只返回 Lookup 地址，用于测试使用
+This module only returns the Lookup address, used for testing
 
 _static_
 
-指定对应的静态地址，通常用于固定 IP 地址的情况
+Specifies the corresponding static address, usually used for fixed IP addresses
 
 _myip_
 
-通过访问 ipip.net 得知访问的 IP 地址，推荐的获取 IP 地址方法之一，用于访问主机有公网地址并能直接访问的情况（如 DMZ 主机）。
+Gets the IP address by accessing ipip.net, one of the recommended methods for obtaining IP addresses, used when the host has a public network address and can be accessed directly (such as DMZ hosts)
 
 _biturl_
 
-另外个能够通过访问对方 Web 地址的 IP 获取服务，原有的 ipsb 服务已经废弃不再使用。
+Another IP address acquisition service through accessing web addresses. The original ipsb service has been deprecated
 
-#### target
+### target
 
 _sleep_
 
-啥都不干，就是 Sleep 暂停几秒，可以作为测试使用。
+Does nothing but sleep for a few seconds, can be used for testing
 
 _alidns_
 
-使用阿里云 DNS 服务的接口，需要后台先申请 API 的 Key 和 Token。详细使用方式在 `target/alidns_test.go` 文件中，配置文件例子在 `example/alidns.yml` 中。
+Uses Aliyun DNS service interface, requires backend API Key and Token application. Detailed usage is in `target/alidns_test.go`, and configuration example is in `example/alidns.yml`
 
 _namedotcom_
 
-使用 Name.com 作为域名服务的后端。因为 Name.com 有白名单验证，所以如果不是本机访问可以考虑使用代理的方式请求（具体请参见 `target/namedotcom_test.go` 这个文件）。
+Uses Name.com as the domain service backend. Because Name.com has whitelist verification, you can consider using a proxy if not accessing locally (see `target/namedotcom_test.go`)
+
+_cloudflare_
+
+Uses Cloudflare's API and SDK to provide dynamic updates for DNS deployed to Cloudflare. See related resources at https://developers.cloudflare.com/api/operations/dns-records-for-a-zone-list-dns-records and https://github.com/cloudflare/cloudflare-go
 
 ## FAQ
 
-_如果我只有一种请求 IP 地址的方式但是有多个域名，这样子一来重复配置二来看起来配置非常的臃肿，有没有更好的方案？_
+_If I only have one way to request IP addresses but multiple domains, repeating configurations makes it look bloated. Is there a better solution?_
 
-这是个比较常见的场景，你可以考虑使用 Yaml 的引用特性减少重复的配置，例如：
+This is a common scenario. You can consider using Yaml's reference feature to reduce repeated configurations, for example:
 
 ```yaml
 defaults: &defaults
@@ -101,7 +107,7 @@ defaults: &defaults
   interval: 60
 ```
 
-首先定义每分钟返回个 lo 的回传本地地址，然后配置对应的域名更新：
+First define returning a local address from lo every minute, then configure the corresponding domain updates:
 
 ```yaml
 ddns:
@@ -121,18 +127,18 @@ ddns:
         - d.com
 ```
 
-这样子配置后，只需要关心 target 也就是域名的配置即可。
+After configuring this way, you only need to focus on the target (domain) configuration.
 
-### WebHook 的配置
+### WebHook Configuration
 
-WebHook 可以在任何配置更改的情况下通知到用户，可以参考使用以下的配置：
+WebHook can notify users of any configuration changes. You can use the following configuration:
 
 ```yaml
 webhook:
   url: https://<your-webhook-address>
 ```
 
-类似这样子配置后，当地址发生改变时，会将结果和更改的域名结果 POST 到对应的地址。结果的格式如下：
+After configuring like this, when the address changes, the results and changed domain results will be POSTed to the corresponding address. The result format is as follows:
 
 ```json
 {
@@ -142,6 +148,6 @@ webhook:
 }
 ```
 
-如果有多个域名的结果，会用逗号分隔。
+If there are multiple domain results, they will be separated by commas.
 
 `- eof -`
