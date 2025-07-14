@@ -3,16 +3,17 @@ package source
 import (
 	"context"
 	"fmt"
+	"net"
+
 	"github.com/mingcheng/simplyddns"
 	"github.com/tidwall/gjson"
-	"net"
 )
 
 func init() {
 	const Name = "ipip"
 
 	fn := func(ctx context.Context, _ *simplyddns.SourceConfig) (*net.IP, error) {
-		data, err := RawStrByURL(context.Background(), "https://myip.ipip.net/json", map[string]string{
+		data, err := RawStrByURL(ctx, "https://myip.ipip.net/json", map[string]string{
 			"Accept": "application/json",
 		})
 

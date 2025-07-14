@@ -80,7 +80,9 @@ func (p *Program) Start() error {
 // Stop Program trigger by svc library
 func (p *Program) Stop() error {
 	log.Debug("stopping Program, bye~")
-	p.Dispatch.Stop()
+	if p.Dispatch != nil {
+		p.Dispatch.Stop()
+	}
 
 	return nil
 }

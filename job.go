@@ -17,11 +17,12 @@ package simplyddns
 import (
 	"context"
 	"fmt"
-	"github.com/go-resty/resty/v2"
 	"net"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/go-resty/resty/v2"
 )
 
 // SourceFunc to define the source function
@@ -45,8 +46,8 @@ type TargetConfig struct {
 type WebHook struct {
 	Url      string `yaml:"url" mapstructure:"url"`
 	Token    string `yaml:"token" mapstructure:"token"`
-	UserName string `yaml:"token" mapstructure:"username"`
-	Password string `yaml:"token" mapstructure:"password"`
+	UserName string `yaml:"username" mapstructure:"username"`
+	Password string `yaml:"password" mapstructure:"password"`
 }
 
 // JobConfig to define the job configure
@@ -63,7 +64,7 @@ type Job struct {
 	TargetFunc TargetFunc
 	ticker     *time.Ticker
 	done       chan bool
-	lastIP     *net.IP
+	lastIP     net.IP
 }
 
 // RunWebhook to run the webhook when ip address has updated
@@ -108,67 +109,69 @@ func (j *Job) Start(ctx context.Context) {
 			job  = j
 		)
 
-		for ; true; <-job.ticker.C {
-			var config = job.Config
+		for {
+			select {
+			case <-job.ticker.C:
+				var config = job.Config
 
-			// check configure
-			if err = ValidateConfig(config); err != nil {
-				log.Errorf("validate job configure is fail, %v", err)
-				continue
-			}
-
-			// run source function
-			if addr, err = job.Source(ctx, &config.Source); err != nil || addr == nil || addr.String() == "" {
-				log.Error(err)
-				continue
-			}
-
-			// markup the source func result
-			log.Debugf("get address from source fun %s, value is %s", config.Source.Type, addr.String())
-
-			// ignore the same ip address
-			if job.lastIP != nil && job.lastIP.Equal(*addr) {
-				log.Warnf("ignore the cached address %s", addr.String())
-				continue
-			}
-
-			domains := config.Target.Domains
-			if len(domains) > 0 {
-				if err = ValidateRecords(domains, addr); err == nil {
-					log.Errorf("valdate dns record without error, maybe already setted %s", addr.String())
+				// check configure
+				if err = ValidateConfig(config); err != nil {
+					log.Errorf("validate job configure is fail, %v", err)
 					continue
 				}
-			}
 
-			// run the target func
-			err = job.TargetFunc(ctx, addr, &job.Config.Target)
-			if err != nil {
-				log.Warn(err)
-				continue
-			}
-			log.Infof("run target function is successful, please check")
-
-			// cache the last ip address
-			job.lastIP = addr
-
-			// trigger the webhook if configured
-			if config.WebHook.Url != "" {
-				log.Tracef("the webhook url is %s", config.WebHook.Url)
-				if err = job.RunWebhook(ctx, addr.String(), domains); err != nil {
-					log.Warnf("run webhook with error %s", err.Error())
-				} else {
-					log.Infof("run webhook %s is finished", config.WebHook.Url)
+				// run source function
+				if addr, err = job.Source(ctx, &config.Source); err != nil || addr == nil || addr.String() == "" {
+					log.Error(err)
+					continue
 				}
+
+				// markup the source func result
+				log.Debugf("get address from source fun %s, value is %s", config.Source.Type, addr.String())
+
+				// ignore the same ip address
+				if j.lastIP != nil && j.lastIP.Equal(*addr) {
+					log.Warnf("ignore the cached address %s", addr.String())
+					continue
+				}
+
+				domains := config.Target.Domains
+				if len(domains) > 0 {
+					if err = ValidateRecords(domains, addr); err == nil {
+						log.Errorf("valdate dns record without error, maybe already setted %s", addr.String())
+						continue
+					}
+				}
+
+				// run the target func
+				err = job.TargetFunc(ctx, addr, &job.Config.Target)
+				if err != nil {
+					log.Warn(err)
+					continue
+				}
+				log.Infof("run target function is successful, please check")
+
+				// cache the last ip address
+				job.lastIP = *addr
+
+				// trigger the webhook if configured
+				if config.WebHook.Url != "" {
+					log.Tracef("the webhook url is %s", config.WebHook.Url)
+					if err = job.RunWebhook(ctx, addr.String(), domains); err != nil {
+						log.Warnf("run webhook with error %s", err.Error())
+					} else {
+						log.Infof("run webhook %s is finished", config.WebHook.Url)
+					}
+				}
+			case <-j.done:
+				j.ticker.Stop()
+				return
+			case <-ctx.Done():
+				j.ticker.Stop()
+				return
 			}
 		}
 	}()
-
-	select {
-	case <-j.done:
-	case <-ctx.Done():
-		j.ticker.Stop()
-		return
-	}
 }
 
 // Stop to stop a job
@@ -179,14 +182,14 @@ func (j *Job) Stop() {
 
 // Source to execute multi-source function
 func (j Job) Source(ctx context.Context, config *SourceConfig) (*net.IP, error) {
-	if j.SourceFunc == nil || len(j.SourceFunc) == 0 {
+	if len(j.SourceFunc) == 0 {
 		return nil, fmt.Errorf("source functions is empty")
 	}
 
 	var (
 		err      error
 		errTimes int
-		lastAddr *net.IP
+		lastAddr net.IP
 	)
 
 	for _, v := range j.SourceFunc {
@@ -198,11 +201,11 @@ func (j Job) Source(ctx context.Context, config *SourceConfig) (*net.IP, error) 
 		}
 
 		if addr != nil {
-			if lastAddr != nil && !addr.Equal(*lastAddr) {
+			if lastAddr != nil && !addr.Equal(lastAddr) {
 				return nil, fmt.Errorf("fetch address is not the same, %v vs %v", lastAddr, addr)
 			}
 
-			lastAddr = addr
+			lastAddr = *addr
 		}
 	}
 
@@ -210,7 +213,7 @@ func (j Job) Source(ctx context.Context, config *SourceConfig) (*net.IP, error) 
 		return nil, fmt.Errorf("max error times reached(%d), so the result is not right", errTimes)
 	}
 
-	return lastAddr, nil
+	return &lastAddr, nil
 }
 
 // NewJob for instance a new ddns job
@@ -221,9 +224,11 @@ func NewJob(config JobConfig) (job *Job, err error) {
 		return
 	}
 
+	// Set default interval if not specified or too small
 	if config.Source.Interval <= 0 {
-		err = fmt.Errorf("source check interval can not below zero or empty")
-		return
+		config.Source.Interval = DefaultInterval
+	} else if config.Source.Interval < MinInterval {
+		config.Source.Interval = MinInterval
 	}
 
 	// split fn types as array
@@ -238,7 +243,7 @@ func NewJob(config JobConfig) (job *Job, err error) {
 
 	for _, v := range types {
 		var fn SourceFunc
-		fn, err = SourceFuncByName(strings.ToLower(v))
+		fn, err = SourceFuncByName(strings.ToLower(strings.TrimSpace(v)))
 		if err != nil {
 			return
 		}

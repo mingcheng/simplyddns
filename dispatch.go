@@ -31,7 +31,10 @@ type Dispatch struct {
 func (d *Dispatch) Start(ctx context.Context) {
 	for _, v := range d.jobs {
 		d.wg.Add(1)
-		go v.Start(ctx)
+		go func(job *Job) {
+			defer d.wg.Done()
+			job.Start(ctx)
+		}(v)
 	}
 
 	d.wg.Wait()
@@ -40,9 +43,9 @@ func (d *Dispatch) Start(ctx context.Context) {
 // Stop the dispatch
 func (d *Dispatch) Stop() {
 	for _, v := range d.jobs {
-		d.wg.Done()
-		go v.Stop()
+		v.Stop()
 	}
+	d.wg.Wait()
 }
 
 func NewDispatch(configs []JobConfig) (*Dispatch, error) {
