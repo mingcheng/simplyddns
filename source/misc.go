@@ -12,9 +12,11 @@ package source
 
 import (
 	"context"
+	"fmt"
+	"net"
+
 	"github.com/go-resty/resty/v2"
 	ddns "github.com/mingcheng/simplyddns"
-	"net"
 )
 
 var (
@@ -37,12 +39,7 @@ func RawIPByURL(url string) (addr net.IP, err error) {
 }
 
 func RawStrByURL(ctx context.Context, url string, headers map[string]string) (result string, err error) {
-	var (
-		req  *resty.Request
-		resp *resty.Response
-	)
-
-	req = resty.New().R().
+	req := resty.New().R().
 		SetContext(ctx).
 		SetHeaders(map[string]string{
 			"Referer":    url,
@@ -53,10 +50,13 @@ func RawStrByURL(ctx context.Context, url string, headers map[string]string) (re
 		req.SetHeaders(headers)
 	}
 
-	resp, err = req.Get(url)
+	resp, err := req.Get(url)
+	if err != nil {
+		return "", err
+	}
 
 	if !resp.IsSuccess() {
-		return "", err
+		return "", fmt.Errorf("HTTP request failed with status %s", resp.Status())
 	}
 
 	return string(resp.Body()), nil

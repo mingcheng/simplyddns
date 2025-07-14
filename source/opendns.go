@@ -3,9 +3,10 @@ package source
 import (
 	"context"
 	"fmt"
+	"net"
+
 	"github.com/mingcheng/simplyddns"
 	"github.com/tidwall/gjson"
-	"net"
 )
 
 //ip=103.135.249.59
@@ -15,7 +16,7 @@ func init() {
 
 	fn := func(ctx context.Context, _ *simplyddns.SourceConfig) (*net.IP, error) {
 
-		data, err := RawStrByURL(context.Background(), "https://myipv4.p1.opendns.com/get_my_ip", map[string]string{
+		data, err := RawStrByURL(ctx, "https://myipv4.p1.opendns.com/get_my_ip", map[string]string{
 			"Accept":     "application/json",
 			"User-Agent": UserAgent,
 		})

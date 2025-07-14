@@ -4,9 +4,10 @@ VERSION=1.5.0
 BIN=simplyddns
 DIR_SRC=./cmd/simplyddns
 DOCKER_CMD=docker
+GIT_COMMIT=$(shell git rev-parse --short HEAD)
 
 GO_ENV=CGO_ENABLED=0
-GO_FLAGS=-ldflags="-X main.BuildVersion=$(VERSION) -X 'main.BuildTime=`date`' -extldflags -static"
+GO_FLAGS=-ldflags="-s -w -X main.BuildVersion=$(VERSION) -X 'main.BuildTime=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')' -X main.BuildCommit=$(GIT_COMMIT) -extldflags -static"
 GO=$(GO_ENV) $(shell which go)
 
 build: $(DIR_SRC)/main.go
