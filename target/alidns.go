@@ -1,11 +1,15 @@
-/**
+/*!*
+ * Copyright (c) 2025-2026 Ming Lyu, aka mingcheng
+ *
+ * This source code is licensed under the MIT License,
+ * which is located in the LICENSE file in the source tree's root directory.
+ *
  * File: alidns.go
- * Author: Ming Cheng<mingcheng@outlook.com>
+ * Author: mingcheng <mingcheng@apache.org>
+ * File Created: Thursday, December 24th 2020, 10:58:18 am
  *
- * Created Date: Thursday, December 24th 2020, 10:58:18 am
- * Last Modified: Monday, December 28th 2020, 2:49:23 pm
- *
- * http://www.opensource.org/licenses/MIT
+ * Modified By: mingcheng <mingcheng@apache.org>
+ * Last Modified: 2026-05-12 12:24:20
  */
 
 package target
@@ -84,7 +88,7 @@ func (a *AliDNS) GetRecord(domain string) (*alidns.Record, error) {
 
 	key := fmt.Sprintf("%s.%s", tld.Domain, tld.TLD)
 	if a.domains[key] == nil {
-		return nil, fmt.Errorf("domian %s is not found", key)
+		return nil, fmt.Errorf("domain %s is not found", key)
 	}
 
 	if a.records[domain] != nil {
@@ -112,7 +116,7 @@ func (a *AliDNS) GetRecord(domain string) (*alidns.Record, error) {
 	return &record, nil
 }
 
-// UpdateRecord for update a existsed record
+// UpdateRecord updates an existing DNS record.
 func (a *AliDNS) UpdateRecord(domain string, ip *net.IP) (*alidns.UpdateDomainRecordResponse, error) {
 	tld, err := simplyddns.ParseDomain(domain)
 	if err != nil {

@@ -1,15 +1,15 @@
 /*!*
- * Copyright (c) 2025 Hangzhou Guanwaii Technology Co,.Ltd.
+ * Copyright (c) 2026 Ming Lyu, aka mingcheng
  *
  * This source code is licensed under the MIT License,
  * which is located in the LICENSE file in the source tree's root directory.
  *
  * File: ipwcn.go
- * Author: mingcheng (mingcheng@apache.org)
+ * Author: mingcheng <mingcheng@apache.org>
  * File Created: 2024-11-15 14:46:48
  *
- * Modified By: mingcheng (mingcheng@apache.org)
- * Last Modified: 2025-07-14 14:18:40
+ * Modified By: mingcheng <mingcheng@apache.org>
+ * Last Modified: 2026-05-12 12:25:39
  */
 
 package source
@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/mingcheng/simplyddns"
 )
@@ -33,7 +34,7 @@ func init() {
 			return nil, err
 		}
 
-		addr := net.ParseIP(resp)
+		addr := net.ParseIP(strings.TrimSpace(resp))
 		if addr == nil {
 			return nil, fmt.Errorf("failed to parse IP address: %s", resp)
 		}

@@ -1,15 +1,15 @@
 /*!*
- * Copyright (c) 2025 Hangzhou Guanwaii Technology Co,.Ltd.
+ * Copyright (c) 2026 Ming Lyu, aka mingcheng
  *
  * This source code is licensed under the MIT License,
  * which is located in the LICENSE file in the source tree's root directory.
  *
  * File: constants.go
- * Author: mingcheng (mingcheng@apache.org)
+ * Author: mingcheng <mingcheng@apache.org>
  * File Created: 2025-07-14
  *
- * Modified By: mingcheng (mingcheng@apache.org)
- * Last Modified: 2025-07-14
+ * Modified By: mingcheng <mingcheng@apache.org>
+ * Last Modified: 2026-05-12 12:12:02
  */
 
 package simplyddns

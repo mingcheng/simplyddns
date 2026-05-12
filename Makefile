@@ -1,6 +1,6 @@
 .PHONY: build clean test act darwin_universal
 
-VERSION=1.5.0
+VERSION=2.0.0
 BIN=simplyddns
 DIR_SRC=./cmd/simplyddns
 DOCKER_CMD=docker

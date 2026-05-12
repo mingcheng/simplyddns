@@ -1,15 +1,15 @@
 /*!*
- * Copyright (c) 2025 Hangzhou Guanwaii Technology Co,.Ltd.
+ * Copyright (c) 2026 Ming Lyu, aka mingcheng
  *
  * This source code is licensed under the MIT License,
  * which is located in the LICENSE file in the source tree's root directory.
  *
  * File: dispatch.go
- * Author: mingcheng (mingcheng@apache.org)
+ * Author: mingcheng <mingcheng@apache.org>
  * File Created: Friday, December 25th 2020, 10:46:17 pm
  *
- * Modified By: mingcheng (mingcheng@apache.org)
- * Last Modified: 2025-03-12 13:39:40
+ * Modified By: mingcheng <mingcheng@apache.org>
+ * Last Modified: 2026-05-12 12:23:33
  */
 
 package simplyddns
@@ -20,6 +20,7 @@ import (
 	"time"
 )
 
+// Dispatch coordinates a set of DDNS jobs that run concurrently.
 type Dispatch struct {
 	wg      sync.WaitGroup
 	jobs    []*Job
@@ -27,7 +28,7 @@ type Dispatch struct {
 	Configs []JobConfig
 }
 
-// Start the dispatch
+// Start runs every job concurrently and blocks until all of them return.
 func (d *Dispatch) Start(ctx context.Context) {
 	for _, v := range d.jobs {
 		d.wg.Add(1)
@@ -40,7 +41,7 @@ func (d *Dispatch) Start(ctx context.Context) {
 	d.wg.Wait()
 }
 
-// Stop the dispatch
+// Stop signals every job to stop and waits for them to return.
 func (d *Dispatch) Stop() {
 	for _, v := range d.jobs {
 		v.Stop()
@@ -48,19 +49,20 @@ func (d *Dispatch) Stop() {
 	d.wg.Wait()
 }
 
+// NewDispatch creates a new Dispatch from the given job configurations.
 func NewDispatch(configs []JobConfig) (*Dispatch, error) {
-	log.Debugf("new displatch instance with configure: %v", configs)
+	log.Debugf("new dispatch instance with configure: %v", configs)
 	dispatch := &Dispatch{
 		Configs: configs,
 	}
 
 	for _, v := range configs {
-		if job, err := NewJob(v); err != nil {
+		job, err := NewJob(v)
+		if err != nil {
 			return nil, err
-		} else {
-			log.Debugf("add job %v to dispatch queue", job)
-			dispatch.jobs = append(dispatch.jobs, job)
 		}
+		log.Debugf("add job %v to dispatch queue", job)
+		dispatch.jobs = append(dispatch.jobs, job)
 	}
 
 	return dispatch, nil
