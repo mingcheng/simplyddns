@@ -1,11 +1,15 @@
-/**
+/*!*
+ * Copyright (c) 2025-2026 Ming Lyu, aka mingcheng
+ *
+ * This source code is licensed under the MIT License,
+ * which is located in the LICENSE file in the source tree's root directory.
+ *
  * File: alidns_test.go
- * Author: Ming Cheng<mingcheng@outlook.com>
+ * Author: mingcheng <mingcheng@apache.org>
+ * File Created: Monday, December 28th 2020, 11:10:47 am
  *
- * Created Date: Monday, December 28th 2020, 11:10:47 am
- * Last Modified: Monday, December 28th 2020, 2:47:07 pm
- *
- * http://www.opensource.org/licenses/MIT
+ * Modified By: mingcheng <mingcheng@apache.org>
+ * Last Modified: 2026-05-12 12:24:34
  */
 
 package target

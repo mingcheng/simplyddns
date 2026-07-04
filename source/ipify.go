@@ -1,20 +1,26 @@
-/**
- * File: myip.go
- * Author: Ming Cheng<mingcheng@outlook.com>
+/*!*
+ * Copyright (c) 2025-2026 Ming Lyu, aka mingcheng
  *
- * Created Date: Saturday, December 26th 2020, 10:41:38 pm
- * Last Modified: Sunday, December 27th 2020, 7:35:13 pm
+ * This source code is licensed under the MIT License,
+ * which is located in the LICENSE file in the source tree's root directory.
  *
- * http://www.opensource.org/licenses/MIT
+ * File: ipify.go
+ * Author: mingcheng <mingcheng@apache.org>
+ * File Created: Saturday, December 26th 2020, 10:41:38 pm
+ *
+ * Modified By: mingcheng <mingcheng@apache.org>
+ * Last Modified: 2026-05-12 12:25:56
  */
 
 package source
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"strings"
 
 	"github.com/mingcheng/simplyddns"
 )
@@ -22,22 +28,32 @@ import (
 func init() {
 	const Name = "ipify.org"
 	fn := func(ctx context.Context, _ *simplyddns.SourceConfig) (*net.IP, error) {
-
 		log.Debugf("%s start requests", Name)
-		resp, err := http.Get("https://api.ipify.org?format=text")
-		if err != nil || resp.StatusCode != http.StatusOK {
-			log.Debug(err)
-			return nil, err
-		}
 
-		ip, err := io.ReadAll(resp.Body)
-
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.ipify.org?format=text", nil)
 		if err != nil {
-			log.Debug(err)
 			return nil, err
 		}
 
-		addr := net.ParseIP(string(ip))
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("%s returned status %s", Name, resp.Status)
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		addr := net.ParseIP(strings.TrimSpace(string(body)))
+		if addr == nil {
+			return nil, fmt.Errorf("%s returned invalid IP %q", Name, string(body))
+		}
 		log.Debugf("%s remote address is %s", Name, addr.String())
 		return &addr, nil
 	}

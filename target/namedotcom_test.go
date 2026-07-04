@@ -1,11 +1,15 @@
-/**
+/*!*
+ * Copyright (c) 2025-2026 Ming Lyu, aka mingcheng
+ *
+ * This source code is licensed under the MIT License,
+ * which is located in the LICENSE file in the source tree's root directory.
+ *
  * File: namedotcom_test.go
- * Author: Ming Cheng<mingcheng@outlook.com>
+ * Author: mingcheng <mingcheng@apache.org>
+ * File Created:  Saturday, December 26th 2020, 11:04:07 pm
  *
- * Created Date: Saturday, December 26th 2020, 11:04:07 pm
- * Last Modified: Sunday, December 27th 2020, 8:59:14 pm
- *
- * http://www.opensource.org/licenses/MIT
+ * Modified By: mingcheng <mingcheng@apache.org>
+ * Last Modified: 2026-05-12 12:15:30
  */
 
 package target
@@ -35,15 +39,14 @@ func TestTargetNameDotCom(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
-	go fn(ctx, &ip, &simplyddns.TargetConfig{
-		Key:     os.Getenv("NAME_COM_KEY"),
-		Token:   os.Getenv("NAME_COM_TOKEN"),
-		Proxy:   os.Getenv("NAME_COM_PROXY"),
-		Domains: []string{"a.example.org", "b.example.org"},
-	})
+	go func() {
+		_ = fn(ctx, &ip, &simplyddns.TargetConfig{
+			Key:     os.Getenv("NAME_COM_KEY"),
+			Token:   os.Getenv("NAME_COM_TOKEN"),
+			Proxy:   os.Getenv("NAME_COM_PROXY"),
+			Domains: []string{"a.example.org", "b.example.org"},
+		})
+	}()
 
-	select {
-	case <-ctx.Done():
-		// do nothing
-	}
+	<-ctx.Done()
 }

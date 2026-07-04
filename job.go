@@ -1,15 +1,15 @@
 /*!*
- * Copyright (c) 2022-2025 Hangzhou Guanwaii Technology Co,.Ltd.
+ * Copyright (c) 2026 Ming Lyu, aka mingcheng
  *
  * This source code is licensed under the MIT License,
  * which is located in the LICENSE file in the source tree's root directory.
  *
  * File: job.go
- * Author: mingcheng (mingcheng@apache.org)
- * File Created: 2022-07-22 23:37:43
+ * Author: mingcheng <mingcheng@apache.org>
+ * File Created: 2026-05-12 12:08:01
  *
- * Modified By: mingcheng (mingcheng@apache.org)
- * Last Modified: 2025-02-28 10:46:31
+ * Modified By: mingcheng <mingcheng@apache.org>
+ * Last Modified: 2026-05-12 12:23:12
  */
 
 package simplyddns
@@ -17,14 +17,15 @@ package simplyddns
 import (
 	"context"
 	"fmt"
-	"github.com/go-resty/resty/v2"
 	"net"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/go-resty/resty/v2"
 )
 
-// SourceFunc to define the source function
+// SourceConfig describes how a source function obtains the public IP address.
 type SourceConfig struct {
 	Interval uint   `yaml:"interval,omitempty"`
 	Type     string `yaml:"type,omitempty"`
@@ -32,7 +33,7 @@ type SourceConfig struct {
 	Content  string `yaml:"content"`
 }
 
-// TargetFunc to define the target function
+// TargetConfig describes how a target function updates DNS records.
 type TargetConfig struct {
 	Type    string   `yaml:"type,omitempty"`
 	Key     string   `yaml:"key,omitempty"`
@@ -41,33 +42,34 @@ type TargetConfig struct {
 	Domains []string `yaml:"domains,omitempty"`
 }
 
-// WebHook to define the webhook
+// WebHook describes the webhook triggered when the address changes.
 type WebHook struct {
 	Url      string `yaml:"url" mapstructure:"url"`
 	Token    string `yaml:"token" mapstructure:"token"`
-	UserName string `yaml:"token" mapstructure:"username"`
-	Password string `yaml:"token" mapstructure:"password"`
+	UserName string `yaml:"username" mapstructure:"username"`
+	Password string `yaml:"password" mapstructure:"password"`
 }
 
-// JobConfig to define the job configure
+// JobConfig describes a single DDNS job, composed of a source, a target and
+// an optional webhook.
 type JobConfig struct {
 	WebHook WebHook      `yaml:"webhook" mapstructure:"webhook"`
 	Source  SourceConfig `yaml:"source,omitempty" mapstructure:"source"`
 	Target  TargetConfig `yaml:"target,omitempty" mapstructure:"target"`
 }
 
-// Job to define the job
+// Job represents a running DDNS job created from a JobConfig.
 type Job struct {
 	Config     *JobConfig
 	SourceFunc []SourceFunc
 	TargetFunc TargetFunc
 	ticker     *time.Ticker
 	done       chan bool
-	lastIP     *net.IP
+	lastIP     net.IP
 }
 
-// RunWebhook to run the webhook when ip address has updated
-func (j *Job) RunWebhook(ctx context.Context, addr string, domains []string) (err error) {
+// RunWebhook triggers the configured webhook after a successful address update.
+func (j *Job) RunWebhook(ctx context.Context, addr string, domains []string) error {
 	client := resty.New()
 
 	request := client.R().
@@ -78,8 +80,7 @@ func (j *Job) RunWebhook(ctx context.Context, addr string, domains []string) (er
 			"address": addr,
 			"domains": strings.Join(domains, ","),
 			"now":     time.Now(),
-		}).
-		SetError(&err)
+		})
 
 	if token := j.Config.WebHook.Token; token != "" {
 		request.SetAuthToken(token)
@@ -89,161 +90,163 @@ func (j *Job) RunWebhook(ctx context.Context, addr string, domains []string) (er
 		request.SetBasicAuth(username, j.Config.WebHook.Password)
 	}
 
-	var resp *resty.Response
-	resp, err = request.Post(j.Config.WebHook.Url)
-
-	if resp.StatusCode() != http.StatusOK {
-		err = fmt.Errorf("%v", resp.Status())
+	resp, err := request.Post(j.Config.WebHook.Url)
+	if err != nil {
+		return err
 	}
 
-	return err
+	if resp.StatusCode() != http.StatusOK {
+		return fmt.Errorf("webhook returned non-OK status: %s", resp.Status())
+	}
+
+	return nil
 }
 
-// Start to start a job
+// Start runs the job loop until Stop is called or the context is done. Each
+// tick fetches the address from the source, optionally validates it against
+// the configured domains and applies the target function.
 func (j *Job) Start(ctx context.Context) {
-	go func() {
-		var (
-			err  error
-			addr *net.IP
-			job  = j
-		)
+	for {
+		select {
+		case <-j.ticker.C:
+			config := j.Config
 
-		for ; true; <-job.ticker.C {
-			var config = job.Config
-
-			// check configure
-			if err = ValidateConfig(config); err != nil {
-				log.Errorf("validate job configure is fail, %v", err)
+			// validate the job configure
+			if err := ValidateConfig(config); err != nil {
+				log.Errorf("validate job configure failed, %v", err)
 				continue
 			}
 
 			// run source function
-			if addr, err = job.Source(ctx, &config.Source); err != nil || addr == nil || addr.String() == "" {
-				log.Error(err)
+			addr, err := j.Source(ctx, &config.Source)
+			if err != nil || addr == nil || addr.String() == "" {
+				if err != nil {
+					log.Error(err)
+				}
 				continue
 			}
 
-			// markup the source func result
-			log.Debugf("get address from source fun %s, value is %s", config.Source.Type, addr.String())
+			log.Debugf("got address from source %q, value is %s", config.Source.Type, addr.String())
 
 			// ignore the same ip address
-			if job.lastIP != nil && job.lastIP.Equal(*addr) {
-				log.Warnf("ignore the cached address %s", addr.String())
+			if j.lastIP != nil && j.lastIP.Equal(*addr) {
+				log.Debugf("ignore the cached address %s", addr.String())
 				continue
 			}
 
 			domains := config.Target.Domains
 			if len(domains) > 0 {
-				if err = ValidateRecords(domains, addr); err == nil {
-					log.Errorf("valdate dns record without error, maybe already setted %s", addr.String())
+				// if ValidateRecords returns nil every domain already points
+				// to the current address, so there is nothing to do.
+				if err := ValidateRecords(domains, addr); err == nil {
+					log.Debugf("dns records already point to %s, skip", addr.String())
 					continue
 				}
 			}
 
-			// run the target func
-			err = job.TargetFunc(ctx, addr, &job.Config.Target)
-			if err != nil {
+			// run the target function
+			if err := j.TargetFunc(ctx, addr, &config.Target); err != nil {
 				log.Warn(err)
 				continue
 			}
-			log.Infof("run target function is successful, please check")
+			log.Infof("target function executed successfully")
 
 			// cache the last ip address
-			job.lastIP = addr
+			j.lastIP = *addr
 
 			// trigger the webhook if configured
 			if config.WebHook.Url != "" {
-				log.Tracef("the webhook url is %s", config.WebHook.Url)
-				if err = job.RunWebhook(ctx, addr.String(), domains); err != nil {
-					log.Warnf("run webhook with error %s", err.Error())
+				log.Tracef("triggering webhook %s", config.WebHook.Url)
+				if err := j.RunWebhook(ctx, addr.String(), domains); err != nil {
+					log.Warnf("webhook failed: %v", err)
 				} else {
-					log.Infof("run webhook %s is finished", config.WebHook.Url)
+					log.Infof("webhook %s finished", config.WebHook.Url)
 				}
 			}
+		case <-j.done:
+			j.ticker.Stop()
+			return
+		case <-ctx.Done():
+			j.ticker.Stop()
+			return
 		}
-	}()
-
-	select {
-	case <-j.done:
-	case <-ctx.Done():
-		j.ticker.Stop()
-		return
 	}
 }
 
-// Stop to stop a job
+// Stop signals the job loop to exit.
 func (j *Job) Stop() {
 	log.Debug("stopping job")
 	j.done <- true
 }
 
-// Source to execute multi-source function
-func (j Job) Source(ctx context.Context, config *SourceConfig) (*net.IP, error) {
-	if j.SourceFunc == nil || len(j.SourceFunc) == 0 {
+// Source executes every registered source function for this job and returns
+// the resolved address. When multiple source functions are configured, they
+// must all agree on the same address; otherwise an error is returned.
+func (j *Job) Source(ctx context.Context, config *SourceConfig) (*net.IP, error) {
+	if len(j.SourceFunc) == 0 {
 		return nil, fmt.Errorf("source functions is empty")
 	}
 
 	var (
-		err      error
 		errTimes int
-		lastAddr *net.IP
+		lastAddr net.IP
 	)
 
-	for _, v := range j.SourceFunc {
-		var addr *net.IP
-		addr, err = v(ctx, config)
+	for _, fn := range j.SourceFunc {
+		addr, err := fn(ctx, config)
 		if err != nil {
-			log.Error(err, errTimes)
-			errTimes = errTimes + 1
+			log.Errorf("source function error (%d): %v", errTimes, err)
+			errTimes++
+			continue
 		}
 
-		if addr != nil {
-			if lastAddr != nil && !addr.Equal(*lastAddr) {
-				return nil, fmt.Errorf("fetch address is not the same, %v vs %v", lastAddr, addr)
-			}
-
-			lastAddr = addr
+		if addr == nil {
+			continue
 		}
+
+		if lastAddr != nil && !addr.Equal(lastAddr) {
+			return nil, fmt.Errorf("fetched addresses do not match: %v vs %v", lastAddr, addr)
+		}
+		lastAddr = *addr
 	}
 
-	if errTimes > 0 && len(sourceFuncs) > 3 && errTimes >= len(j.SourceFunc)/2 {
-		return nil, fmt.Errorf("max error times reached(%d), so the result is not right", errTimes)
+	// allow some tolerance when multiple source functions are configured
+	if len(j.SourceFunc) > 3 && errTimes >= len(j.SourceFunc)/2 {
+		return nil, fmt.Errorf("too many source function errors (%d), result is unreliable", errTimes)
 	}
 
-	return lastAddr, nil
+	if lastAddr == nil {
+		return nil, fmt.Errorf("no source function returned a valid address")
+	}
+
+	return &lastAddr, nil
 }
 
-// NewJob for instance a new ddns job
-func NewJob(config JobConfig) (job *Job, err error) {
-	// check the configure
+// NewJob creates a new Job from the given JobConfig.
+func NewJob(config JobConfig) (*Job, error) {
 	if config.Source.Type == "" || config.Target.Type == "" {
-		err = fmt.Errorf("source or target type can not be empty")
-		return
+		return nil, fmt.Errorf("source or target type can not be empty")
 	}
 
+	// set default interval if not specified or too small
 	if config.Source.Interval <= 0 {
-		err = fmt.Errorf("source check interval can not below zero or empty")
-		return
+		config.Source.Interval = DefaultInterval
+	} else if config.Source.Interval < MinInterval {
+		config.Source.Interval = MinInterval
 	}
 
-	// split fn types as array
+	// the source type may contain multiple comma-separated names
 	types := strings.Split(config.Source.Type, ",")
 	if len(types) == 0 {
-		err = fmt.Errorf("load source %s is empty", config.Source.Type)
-		return
+		return nil, fmt.Errorf("source type %q is empty", config.Source.Type)
 	}
 
-	// notice: the source functions is an array
-	var sourceFuncs []SourceFunc
-
+	sourceFuncs := make([]SourceFunc, 0, len(types))
 	for _, v := range types {
-		var fn SourceFunc
-		fn, err = SourceFuncByName(strings.ToLower(v))
+		fn, err := SourceFuncByName(strings.ToLower(strings.TrimSpace(v)))
 		if err != nil {
-			return
+			return nil, err
 		}
-
-		// add func to source functions
 		sourceFuncs = append(sourceFuncs, fn)
 	}
 
@@ -257,6 +260,6 @@ func NewJob(config JobConfig) (job *Job, err error) {
 		TargetFunc: fnTarget,
 		Config:     &config,
 		ticker:     time.NewTicker(time.Second * time.Duration(config.Source.Interval)),
-		done:       make(chan bool),
+		done:       make(chan bool, 1),
 	}, nil
 }
