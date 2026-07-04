@@ -1,0 +1,41 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CGO_ENABLED: "0"
+  GOPROXY: "https://goproxy.cn,direct"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Test
+        run: make test
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: make build
+
+      - name: Build release artifacts
+        run: make dist
