@@ -5,7 +5,7 @@ go 1.26.4
 require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.63.107
 	github.com/cloudflare/cloudflare-go v0.116.0
-	github.com/go-resty/resty/v2 v2.17.0
+	github.com/go-resty/resty/v2 v2.17.2
 	github.com/ipinfo/go/v2 v2.12.0
 	github.com/jpillora/go-tld v1.2.1
 	github.com/judwhite/go-svc v1.2.1
