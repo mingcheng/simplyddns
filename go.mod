@@ -10,7 +10,7 @@ require (
 	github.com/jpillora/go-tld v1.2.1
 	github.com/judwhite/go-svc v1.2.1
 	github.com/namedotcom/go v0.0.0-20180403034216-08470befbe04
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.18.0
