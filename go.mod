@@ -1,6 +1,6 @@
 module github.com/mingcheng/simplyddns
 
-go 1.26.2
+go 1.26.4
 
 require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.63.107
