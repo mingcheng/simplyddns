@@ -30,8 +30,6 @@ env:
   IMAGE_DESCRIPTION: A simple DDNS client written in Go.
   IMAGE_URL: https://github.com/mingcheng/simplyddns
   PLATFORMS: linux/amd64,linux/arm64
-  CGO_ENABLED: "0"
-  GOPROXY: "https://goproxy.cn,direct"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -45,32 +43,9 @@ permissions:
   contents: read
 
 jobs:
-  verify:
-    name: Verify Go project
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - name: Download Go modules
-        run: go mod download
-
-      - name: Run tests
-        run: make test
-
-      - name: Run vet
-        run: go vet ./...
-
   image:
-    name: Build Docker image
+    name: Build and publish Docker image
     runs-on: ubuntu-latest
-    needs: verify
     permissions:
       actions: write
       contents: read
@@ -105,7 +80,7 @@ jobs:
             type=semver,pattern={{version}},enable=${{ github.ref_type == 'tag' }}
             type=semver,pattern={{major}}.{{minor}},enable=${{ github.ref_type == 'tag' }}
             type=sha,enable=true,priority=100,prefix=,suffix=,format=short
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' || github.ref_name == github.event.repository.default_branch }}
           labels: |
             org.opencontainers.image.title=${{ env.IMAGE_TITLE }}
             org.opencontainers.image.description=${{ env.IMAGE_DESCRIPTION }}

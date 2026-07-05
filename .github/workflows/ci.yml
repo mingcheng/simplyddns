@@ -13,28 +13,41 @@ env:
   CGO_ENABLED: "0"
   GOPROXY: "https://goproxy.cn,direct"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
 permissions:
   contents: read
 
 jobs:
-  test:
+  verify:
+    name: Verify Go project
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: true
 
-      - name: Test
+      - name: Download Go modules
+        run: go mod download
+
+      - name: Run tests
         run: make test
 
-      - name: Vet
+      - name: Run vet
         run: go vet ./...
 
-      - name: Build
+      - name: Build binary
         run: make build
 
       - name: Build release artifacts
