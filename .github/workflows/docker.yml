@@ -26,17 +26,59 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  IMAGE_TITLE: simplyddns
+  IMAGE_DESCRIPTION: A simple DDNS client written in Go.
+  IMAGE_URL: https://github.com/mingcheng/simplyddns
+  PLATFORMS: linux/amd64,linux/arm64
+  CGO_ENABLED: "0"
+  GOPROXY: "https://goproxy.cn,direct"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
 
 permissions:
   contents: read
-  actions: write
-  packages: write
 
 jobs:
-  build:
+  verify:
+    name: Verify Go project
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Download Go modules
+        run: go mod download
+
+      - name: Run tests
+        run: make test
+
+      - name: Run vet
+        run: go vet ./...
+
+  image:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    needs: verify
+    permissions:
+      actions: write
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
@@ -52,7 +94,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for Docker
+      - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v6
         env:
@@ -60,18 +102,17 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
-            # # disabled if major zero
-            # type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
+            type=semver,pattern={{version}},enable=${{ github.ref_type == 'tag' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ github.ref_type == 'tag' }}
             type=sha,enable=true,priority=100,prefix=,suffix=,format=short
-            type=schedule,pattern={{date 'YYYYMMDD'}}
             type=raw,value=latest,enable={{is_default_branch}}
           labels: |
-            org.opencontainers.image.title=simplyddns
-            org.opencontainers.image.description=A simple DDNS client written in Go.
+            org.opencontainers.image.title=${{ env.IMAGE_TITLE }}
+            org.opencontainers.image.description=${{ env.IMAGE_DESCRIPTION }}
             org.opencontainers.image.version=${{ github.ref_name }}
-            org.opencontainers.image.url=https://github.com/mingcheng/simplyddns
+            org.opencontainers.image.url=${{ env.IMAGE_URL }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.vendor=${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
 
       - name: Prepare build metadata
@@ -79,18 +120,21 @@ jobs:
         run: |
           echo "build_time=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
           echo "commit=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Build Docker image
+      - name: Build and optionally push Docker image
         uses: docker/build-push-action@v7
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ env.PLATFORMS }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          sbom: true
+          provenance: mode=max
           build-args: |
-            VERSION=${{ github.ref_name }}
+            VERSION=${{ steps.build.outputs.version }}
             BUILD_TIME=${{ steps.build.outputs.build_time }}
             BUILD_COMMIT=${{ steps.build.outputs.commit }}
