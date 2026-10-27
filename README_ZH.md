@@ -2,11 +2,13 @@
 
 - [概念](#概念)
 - [安装](#安装)
+  - [使用 mise 构建](#使用-mise-构建)
   - [docker-compose](#docker-compose)
 - [配置](#配置)
 - [扩展](#扩展)
   - [source](#source)
   - [target](#target)
+- [开发与发布](#开发与发布)
 - [FAQ](#faq)
   - [WebHook 的配置](#webhook-的配置)
 
@@ -27,20 +29,43 @@
 
 ## 安装
 
-出于安全方面的考虑暂时不提供二进制可执行文件，如果您需要自己编译生成二进制文件，可以直接参考 Makefile 文件中的配置。
-通常而言 `make build` 是个非常不错的选择，默认情况下运行它以后（当然，需要 Golang 开发环境）就可以在当前目录下生成对应的可执行文件。
+发布流程会生成 Linux amd64/arm64、macOS amd64/arm64 和 Windows amd64 的压缩包及 `checksums.txt`。每个包都包含可执行文件、许可证、文档和安全的示例配置。下载后可用 `shasum -a 256 -c checksums.txt` 校验完整性。
+
+### 使用 mise 构建
+
+项目工具链版本统一固定在 [mise.toml](mise.toml)，缺失或升级工具均使用 [mise](https://mise.jdx.dev/)。配置中的 `GOTOOLCHAIN=local` 禁止 Go 自动下载不受 mise 管理的替代工具链。
+
+```sh
+mise trust
+mise install
+mise exec -- make build
+./simplyddns --version
+./simplyddns --config example/basic.yml
+```
+
+最后一条命令运行无需公网访问的 loopback/sleep 示例。安装到 Go 的可执行文件目录可使用 `mise exec -- make install`。
 
 ### docker-compose
 
-推荐您使用容器的方式运行本应用，在本程序中还提供了 compose.yml 以及 Dockerfile 文件，方便构建和运行镜像。
+运行前需要可用的 Docker 引擎及 Compose 插件：
+
+```sh
+mise exec -- make build_docker_image
+mise exec docker-cli -- docker run --rm simplyddns:2.0.0 --version
+mise exec docker-cli -- docker compose up --build -d
+```
+
+[compose.yml](compose.yml) 默认只读挂载安全的示例配置，实际更新 DNS 时请改为自己的配置文件。容器以非特权用户运行，建议输出日志到 stderr；使用日志文件时需保证目标路径可写。[Dockerfile](Dockerfile) 内也通过 mise 安装与本地一致的 Go 版本。
 
 ## 配置
 
-详细的配置文件例子在 example 目录中，具体可以参考详细的 Yaml 文件。下面举个非常简单的例子（来自 basic.yml）文件：
+完整示例见 [example/](example/)。可通过 `--config` 指定配置文件；否则依次在 `/etc/simplyddns`、`$HOME/.config/simplyddns` 和当前目录中查找 `simplyddns.yml` 或 `simplyddns.yaml`。
+
+以下是 [basic.yml](example/basic.yml) 中的最小配置：
 
 ```yaml
 logfile: "/dev/stderr"
-debug: True
+debug: true
 
 ddns:
   - source:
@@ -53,27 +78,33 @@ ddns:
 这个配置文件的其中含义就是从 lo 模块中获取 IP 地址后，传给 sleep 的 target 去执行。 因为 sleep 的 target 除了 sleep
 几秒以外，其实什么都不干但由此可以看出 SimplyDDNS 的工作机制。
 
+`interval` 的单位为秒，默认值为 60，小于 30 时按 30 处理，首次检查仍等待一个周期。每轮任务有 30 秒超时限制，内置操作支持停止时取消请求。无效的任务定义、域名及溢出的时间间隔会明确报错。
+
+多个 source 可用逗号分隔，如 `ipify,ipsb`。成功返回的地址必须一致，较大的 source 组还会拒绝过多失败的结果。IPv4 和 IPv6 请分别配置任务；target 根据地址自动选择 A 或 AAAA 记录。成功更新后会缓存地址，地址不变时不重复更新；失败则在后续周期重试。
+
+日志默认输出到 stderr。`/dev/stdout` 和 `/dev/stderr` 直接使用现有标准流，可用于只读容器；普通日志文件会在停止服务时关闭。
+
 ## 扩展
 
-扩展 SimplyDDNS 其实非常的容易，可以分别参考 source 以及 target 中对应的文件即可，比较简单的是 `lo.go` 以及 target 目录中的 `sleep.go` 文件，因为它们并不做任何实际的事情。
+扩展通过注册 `SourceFunc` 或 `TargetFunc` 实现，参见 [func.go](func.go)、[source/lo.go](source/lo.go) 和 [target/sleep.go](target/sleep.go)。扩展必须响应传入的 context，并对无效输入和执行失败返回错误。
 
 ### source
 
-_lo_
+| 名称         | 地址来源                                    |
+| ------------ | ------------------------------------------- |
+| `lo`         | 本地回环地址 `127.0.0.1`，用于测试          |
+| `static`     | `source.content` 中指定的 IPv4 或 IPv6 地址 |
+| `cloudflare` | Cloudflare trace 接口                       |
+| `cz88`       | CZ88 JSON 接口                              |
+| `ipify`      | ipify IPv4 接口                             |
+| `ipinfo`     | IPinfo 纯文本接口                           |
+| `ipip`       | IPIP JSON 接口                              |
+| `ipplus360`  | IPPlus360 JSON 接口                         |
+| `ipsb`       | IP.SB IPv4 接口                             |
+| `myip`       | `api.my-ip.io` 纯文本接口                   |
+| `opendns`    | OpenDNS IPv4 接口                           |
 
-这个模块只返回 Lookup 地址，用于测试使用
-
-_static_
-
-指定对应的静态地址，通常用于固定 IP 地址的情况
-
-_myip_
-
-通过访问 ipip.net 得知访问的 IP 地址，推荐的获取 IP 地址方法之一，用于访问主机有公网地址并能直接访问的情况（如 DMZ 主机）。
-
-_biturl_
-
-另外个能够通过访问对方 Web 地址的 IP 获取服务，原有的 ipsb 服务已经废弃不再使用。
+部分服务只支持一种地址类型，不要在同一任务中混用返回 IPv4 和 IPv6 的 source。
 
 ### target
 
@@ -83,15 +114,40 @@ _sleep_
 
 _alidns_
 
-使用阿里云 DNS 服务的接口，需要后台先申请 API 的 Key 和 Token。详细使用方式在 `target/alidns_test.go` 文件中，配置文件例子在 `example/alidns.yml` 中。
+使用阿里云 DNS，`key` 为 AccessKey ID，`token` 为 AccessKey Secret。配置参见 [example/alidns.yml](example/alidns.yml)。
 
 _namedotcom_
 
-使用 Name.com 作为域名服务的后端。因为 Name.com 有白名单验证，所以如果不是本机访问可以考虑使用代理的方式请求（具体请参见 `target/namedotcom_test.go` 这个文件）。
+使用 Name.com，`key` 为用户名，`token` 为 API token。配置参见 [example/namedotcom.yml](example/namedotcom.yml)。
 
 _cloudflare_
 
-使用 Cloudflare 提供的 API 以及 SDK 为部署到 Cloudflare 的 DNS 提供动态更新支持，详见相关的资源链接 https://developers.cloudflare.com/api/operations/dns-records-for-a-zone-list-dns-records 以及 https://github.com/cloudflare/cloudflare-go
+使用 Cloudflare，`key` 为 Zone ID，`token` 需具有该区域的 DNS 编辑权限。更新采用原地修改，保留记录 ID、TTL、代理开关及其他设置。配置参见 [example/cloudflare.yml](example/cloudflare.yml)。
+
+以上三个 DNS target 均可通过 `proxy` 配置 SOCKS5 代理，格式为 `host:port`。
+
+## 开发与发布
+
+```sh
+mise exec -- make check       # 格式、依赖一致性、vet、单元测试、race/覆盖率、CI 与 Dockerfile 检查
+mise exec -- make vulncheck   # 可达依赖漏洞检查
+mise exec -- make verify-dist
+mise exec -- make release     # 完整发布检查；不会创建 tag、推送或发布
+```
+
+测试采用本地 HTTP 模拟和 DNS 桩，不读取服务商凭据、不修改真实 DNS。覆盖率写入 `coverage.out`。发布验证会检查包内文件、SHA-256、目标系统/架构、Go 版本、CGO 关闭状态，以及当前平台可执行文件的 `--version` 输出。
+
+打包需要主机提供常规 shell 和归档工具（`tar`、`zip`、`shasum`）；可选的 macOS `darwin_universal` 目标还需要平台自带的 `lipo`。`make clean` 只清理生成的文件，不递归删除整个分发目录。
+
+GitHub CI 覆盖 Linux、macOS、Windows，执行 race 检查并上传候选发布包；安全检查使用 CodeQL 和 mise 固定版本的 govulncheck。容器构建也会先运行测试。
+
+发布 2.0.0 前：
+
+1. 审核 [CHANGELOG.md](CHANGELOG.md)，填写发布日期，并确认 `make version` 输出为 `2.0.0`。
+2. 执行 `mise exec -- make release`，并等待所有 CI 任务通过。
+3. 提交审核后的变更，再创建和推送 `v2.0.0` 标签。
+
+发布工作流只检出已存在的版本标签，检查标签与 Makefile 版本一致，重新通过发布检查后才上传压缩包及校验和。手动触发同样要求标签已存在，不会把所选分支冒充成另一个版本发布。预发布版本会正确标记，也不会提升为容器的稳定 `latest` 标签。
 
 ## FAQ
 
@@ -129,11 +185,18 @@ ddns:
 
 ### WebHook 的配置
 
-WebHook 可以在任何配置更改的情况下通知到用户，可以参考使用以下的配置：
+Webhook 在地址成功更新后触发，需要配置在对应任务内：
 
 ```yaml
-webhook:
-  url: https://<your-webhook-address>
+ddns:
+  - source:
+      type: lo
+      interval: 60
+    target:
+      type: sleep
+    webhook:
+      url: https://example.com/webhook
+      token: "<可选的 Bearer token>"
 ```
 
 类似这样子配置后，当地址发生改变时，会将结果和更改的域名结果 POST 到对应的地址。结果的格式如下：
@@ -147,5 +210,7 @@ webhook:
 ```
 
 如果有多个域名的结果，会用逗号分隔。
+
+请求还会发送 `Address` 和 `Domains` 头；也可使用 `username`、`password` 配置 Basic 认证，携带凭据时应使用 HTTPS。任意 2xx 响应都视为成功；Webhook 失败会记录日志，但不会回滚或重复已成功的 DNS 更新。
 
 `- eof -`

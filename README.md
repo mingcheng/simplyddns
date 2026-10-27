@@ -2,15 +2,17 @@
 
 - [Concepts](#concepts)
 - [Installation](#installation)
+  - [Build with mise](#build-with-mise)
   - [docker-compose](#docker-compose)
 - [Configuration](#configuration)
 - [Extensions](#extensions)
   - [source](#source)
   - [target](#target)
+- [Development and release](#development-and-release)
 - [FAQ](#faq)
   - [WebHook Configuration](#webhook-configuration)
 
-SimplyDDNS is a universal DDNS tool that can be used to update domain name records based on obtained IP addresses. It is designed to be flexible and easy to extend. We also privide the Chinese version of this README file, see [README_ZH.md](README_ZH.md).
+SimplyDDNS is a universal DDNS tool that can be used to update domain name records based on obtained IP addresses. It is designed to be flexible and easy to extend. A Chinese version is available in [README_ZH.md](README_ZH.md).
 
 This tool simply monitors and updates domain name records based on obtained IP addresses. [While there are similar existing projects](https://github.com/mingcheng/ddns-go) that are already very useful, there were several points that didn't meet my personal expectations and requirements:
 
@@ -29,21 +31,43 @@ Therefore, by implementing these two interfaces and matching them with configura
 
 ## Installation
 
-For security considerations, binary executables are not provided at this time. If you need to compile the binary yourself, you can refer to the configuration in the Makefile.
+The release workflow produces archives for Linux amd64/arm64, macOS amd64/arm64 and Windows amd64, together with `checksums.txt`. Each archive contains the executable, license, documentation and a safe `simplyddns.yml` example. Verify downloaded archives with `shasum -a 256 -c checksums.txt` before extracting them.
 
-Usually, `make build` is a very good choice. After running it (of course, requiring the Golang development environment), you can generate the corresponding executable file in the current directory.
+### Build with mise
+
+Project tool versions are pinned in [mise.toml](mise.toml). Use [mise](https://mise.jdx.dev/) to install or update tools; Go must not download an unmanaged replacement toolchain (`GOTOOLCHAIN=local`).
+
+```sh
+mise trust
+mise install
+mise exec -- make build
+./simplyddns --version
+./simplyddns --config example/basic.yml
+```
+
+The last command runs an offline loopback/sleep demonstration. To install the executable into Go's binary directory, use `mise exec -- make install`.
 
 ### docker-compose
 
-It's recommended to run this application using containers. The program provides compose.yml and Dockerfile files for easy image building and running.
+With a running Docker engine and the Compose plugin:
+
+```sh
+mise exec -- make build_docker_image
+mise exec docker-cli -- docker run --rm simplyddns:2.0.0 --version
+mise exec docker-cli -- docker compose up --build -d
+```
+
+[compose.yml](compose.yml) mounts the safe example configuration read-only. Replace that mount with your own configuration for real DNS updates. The container runs as an unprivileged user; log to stderr or provide a writable log destination. Go is installed through mise inside the [Dockerfile](Dockerfile), using the same project version as local builds.
 
 ## Configuration
 
-Detailed configuration file examples are in the example directory. Here's a very simple example (from basic.yml):
+See [example/](example/) for complete configurations. Select a file with `--config`; otherwise SimplyDDNS searches `/etc/simplyddns`, `$HOME/.config/simplyddns`, then the working directory for `simplyddns.yml` or `simplyddns.yaml`.
+
+A minimal configuration, from [basic.yml](example/basic.yml):
 
 ```yaml
 logfile: "/dev/stderr"
-debug: True
+debug: true
 
 ddns:
   - source:
@@ -55,27 +79,33 @@ ddns:
 
 This configuration file means getting the IP address from the lo module and passing it to the sleep target for execution. The sleep target does nothing except sleep for a few seconds, but this demonstrates SimplyDDNS's working mechanism.
 
+Intervals are in seconds: the default is 60 and values below 30 are clamped to 30. The first check waits for the interval. Each cycle has a 30-second deadline, and built-in operations honor shutdown cancellation. Invalid job definitions and domain names are rejected instead of being retried indefinitely.
+
+Comma-separated source names are supported, for example `ipify,ipsb`. Successful sources must agree; larger groups also reject excessive failures. Configure IPv4 and IPv6 in separate jobs: targets select A or AAAA records from the supplied address. Successful updates are cached until the source address changes; failed updates are retried on a later tick.
+
+Logs go to stderr by default. `/dev/stdout` and `/dev/stderr` use the existing standard streams, including in read-only containers. Other log files are closed when the service stops.
+
 ## Extensions
 
-Extending SimplyDDNS is very easy. You can refer to the corresponding files in the source and target directories. The simplest ones are `lo.go` and `sleep.go` in the target directory, as they don't do anything practical.
+Extensions register a `SourceFunc` or `TargetFunc`; see [func.go](func.go), [source/lo.go](source/lo.go) and [target/sleep.go](target/sleep.go). Implementations must honor the supplied context and return errors for invalid input or failed operations.
 
 ### source
 
-_lo_
+| Name | Address source |
+| --- | --- |
+| `lo` | Local loopback `127.0.0.1`, for testing |
+| `static` | An IPv4 or IPv6 address from `source.content` |
+| `cloudflare` | Cloudflare trace endpoint |
+| `cz88` | CZ88 JSON endpoint |
+| `ipify` | ipify IPv4 endpoint |
+| `ipinfo` | IPinfo plain-text endpoint |
+| `ipip` | IPIP JSON endpoint |
+| `ipplus360` | IPPlus360 JSON endpoint |
+| `ipsb` | IP.SB IPv4 endpoint |
+| `myip` | `api.my-ip.io` plain-text endpoint |
+| `opendns` | OpenDNS IPv4 endpoint |
 
-This module only returns the Lookup address, used for testing
-
-_static_
-
-Specifies the corresponding static address, usually used for fixed IP addresses
-
-_myip_
-
-Gets the IP address by accessing ipip.net, one of the recommended methods for obtaining IP addresses, used when the host has a public network address and can be accessed directly (such as DMZ hosts)
-
-_biturl_
-
-Another IP address acquisition service through accessing web addresses. The original ipsb service has been deprecated
+An endpoint may only support one address family; do not combine sources that return different families in the same job.
 
 ### target
 
@@ -85,15 +115,40 @@ Does nothing but sleep for a few seconds, can be used for testing
 
 _alidns_
 
-Uses Aliyun DNS service interface, requires backend API Key and Token application. Detailed usage is in `target/alidns_test.go`, and configuration example is in `example/alidns.yml`
+Uses Aliyun DNS. `key` is the access key ID and `token` is the access key secret. See [example/alidns.yml](example/alidns.yml).
 
 _namedotcom_
 
-Uses Name.com as the domain service backend. Because Name.com has whitelist verification, you can consider using a proxy if not accessing locally (see `target/namedotcom_test.go`)
+Uses Name.com. `key` is the username and `token` is the API token. See [example/namedotcom.yml](example/namedotcom.yml).
 
 _cloudflare_
 
-Uses Cloudflare's API and SDK to provide dynamic updates for DNS deployed to Cloudflare. See related resources at https://developers.cloudflare.com/api/operations/dns-records-for-a-zone-list-dns-records and https://github.com/cloudflare/cloudflare-go
+Uses Cloudflare. `key` is the zone ID and `token` is an API token with DNS edit permissions for that zone. Existing records are updated in place, preserving their settings. See [example/cloudflare.yml](example/cloudflare.yml).
+
+All three DNS targets support an optional SOCKS5 `proxy` in `host:port` form.
+
+## Development and release
+
+```sh
+mise exec -- make check       # formatting, module consistency, vet, tests, race/coverage, CI/Dockerfile lint
+mise exec -- make vulncheck   # reachable dependency vulnerability checks
+mise exec -- make verify-dist
+mise exec -- make release     # all release gates; does not tag, push or publish
+```
+
+Tests use local HTTP fixtures and fake DNS responses, never provider credentials or real DNS updates. Coverage is written to `coverage.out`. Release verification checks archive contents, SHA-256 hashes, target OS/architecture, Go version, disabled CGO, and native `--version` startup.
+
+The host needs its standard shell/archive utilities (`tar`, `zip`, `shasum`). The optional macOS `darwin_universal` target also needs the platform `lipo` utility. `mise exec -- make clean` only removes generated files; it does not recursively delete the distribution directory.
+
+GitHub CI tests Linux, macOS and Windows, runs race checks, and uploads release candidates. The security workflow runs CodeQL and the mise-pinned govulncheck. Container builds run tests before building the executable.
+
+Before publishing 2.0.0:
+
+1. Review [CHANGELOG.md](CHANGELOG.md), set its release date, and confirm `mise exec -- make version` reports `2.0.0`.
+2. Run `mise exec -- make release` and let all CI jobs pass.
+3. Commit the reviewed changes, then create and push the `v2.0.0` tag.
+
+The release workflow checks out that existing tag, verifies its version against the Makefile, repeats release gates and publishes the archives with checksums. Manual runs also require an existing version tag; they cannot silently publish the selected branch as a different version. Prereleases are marked as such and do not promote the container's stable `latest` tag.
 
 ## FAQ
 
@@ -131,11 +186,18 @@ After configuring this way, you only need to focus on the target (domain) config
 
 ### WebHook Configuration
 
-WebHook can notify users of any configuration changes. You can use the following configuration:
+A webhook runs after a successful address update. Configure it inside the corresponding job:
 
 ```yaml
-webhook:
-  url: https://<your-webhook-address>
+ddns:
+  - source:
+      type: lo
+      interval: 60
+    target:
+      type: sleep
+    webhook:
+      url: https://example.com/webhook
+      token: "<optional-bearer-token>"
 ```
 
 After configuring like this, when the address changes, the results and changed domain results will be POSTed to the corresponding address. The result format is as follows:
@@ -149,5 +211,7 @@ After configuring like this, when the address changes, the results and changed d
 ```
 
 If there are multiple domain results, they will be separated by commas.
+
+The same address and domain list are sent in the `Address` and `Domains` headers. Basic authentication is also available through `username` and `password`. Use HTTPS for credentials. Any 2xx response is successful; failures are logged without rolling back or repeating the DNS update.
 
 `- eof -`
