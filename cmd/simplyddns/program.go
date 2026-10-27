@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 
@@ -26,8 +27,10 @@ import (
 
 // Program interface for simplyddns
 type Program struct {
-	Configure *simplyddns.Config
-	Dispatch  *simplyddns.Dispatch
+	Configure  *simplyddns.Config
+	ConfigFile string
+	Dispatch   *simplyddns.Dispatch
+	logFile    *os.File
 }
 
 // Init Program by svc library
@@ -38,25 +41,31 @@ func (p *Program) Init(env svc.Environment) error {
 		strings.Join(simplyddns.GetAllSupportSourceFunc(), ", "))
 
 	// read configure from file
-	if err := ReadConfigure(p.Configure); err != nil {
+	if err := readConfigure(p.Configure, p.ConfigFile); err != nil {
 		return err
 	}
 
-	// write to local file
-	if p.Configure.LogFile != "" {
-		log.Debugf("read configure file from %s", p.Configure.LogFile)
-		fp, err := os.OpenFile(p.Configure.LogFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	switch p.Configure.LogFile {
+	case "", "/dev/stderr":
+		log.SetOutput(os.Stderr)
+	case "/dev/stdout":
+		log.SetOutput(os.Stdout)
+	default:
+		fp, err := os.OpenFile(p.Configure.LogFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 		if err != nil {
 			return err
 		}
 
-		log.Out = fp
+		p.logFile = fp
+		log.SetOutput(fp)
 	}
 
 	// detect if debug mode is on
 	if p.Configure.Debug {
 		log.SetLevel(logrus.DebugLevel)
 		log.Debugf("set %v to debug mode", AppName)
+	} else {
+		log.SetLevel(logrus.InfoLevel)
 	}
 
 	return nil
@@ -64,6 +73,9 @@ func (p *Program) Init(env svc.Environment) error {
 
 // Start the Program by svc library
 func (p *Program) Start() error {
+	if p.Configure == nil {
+		return fmt.Errorf("program configuration is nil")
+	}
 	var err error
 
 	p.Dispatch, err = simplyddns.NewDispatch(p.Configure.Jobs)
@@ -83,6 +95,11 @@ func (p *Program) Stop() error {
 	if p.Dispatch != nil {
 		p.Dispatch.Stop()
 	}
-
+	if p.logFile != nil {
+		log.SetOutput(os.Stderr)
+		err := p.logFile.Close()
+		p.logFile = nil
+		return err
+	}
 	return nil
 }

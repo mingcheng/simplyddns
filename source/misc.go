@@ -17,14 +17,16 @@ package source
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"strings"
 
-	"github.com/go-resty/resty/v2"
 	ddns "github.com/mingcheng/simplyddns"
+	"github.com/tidwall/gjson"
 )
 
-var log = ddns.NewLogger()
+var httpClient = &http.Client{Timeout: ddns.DefaultTimeout}
 
 const (
 	// UserAgent mimics a modern desktop browser for endpoints that filter
@@ -38,40 +40,67 @@ const (
 
 // RawIPByURL fetches the response body of url and parses it as a single IP.
 func RawIPByURL(url string) (net.IP, error) {
-	data, err := RawStrByURL(context.Background(), url, nil)
+	addr, err := rawIPByURL(context.Background(), url, nil)
 	if err != nil {
 		return nil, err
 	}
+	return *addr, nil
+}
 
+func parseIP(data string) (*net.IP, error) {
 	addr := net.ParseIP(strings.TrimSpace(data))
 	if addr == nil {
 		return nil, fmt.Errorf("failed to parse IP address from %q", data)
 	}
-	return addr, nil
+	return &addr, nil
+}
+
+func rawIPByURL(ctx context.Context, url string, headers map[string]string) (*net.IP, error) {
+	data, err := RawStrByURL(ctx, url, headers)
+	if err != nil {
+		return nil, err
+	}
+	return parseIP(data)
+}
+
+func jsonIPByURL(ctx context.Context, url, path string, headers map[string]string) (*net.IP, error) {
+	data, err := RawStrByURL(ctx, url, headers)
+	if err != nil {
+		return nil, err
+	}
+	if !gjson.Valid(data) {
+		return nil, fmt.Errorf("source returned invalid JSON")
+	}
+	return parseIP(gjson.Get(data, path).Str)
 }
 
 // RawStrByURL performs an HTTP GET against url and returns the body as a
 // string. Additional headers may be provided to override the defaults.
 func RawStrByURL(ctx context.Context, url string, headers map[string]string) (string, error) {
-	req := resty.New().R().
-		SetContext(ctx).
-		SetHeaders(map[string]string{
-			"Referer":    url,
-			"User-Agent": UserAgent,
-		})
-
-	if headers != nil {
-		req.SetHeaders(headers)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", err
 	}
-
-	resp, err := req.Get(url)
+	req.Header.Set("Referer", url)
+	req.Header.Set("User-Agent", UserAgent)
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return "", err
 	}
 
-	if !resp.IsSuccess() {
-		return "", fmt.Errorf("HTTP request failed with status %s", resp.Status())
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("HTTP request failed with status %s", resp.Status)
 	}
+	body, err := io.ReadAll(resp.Body)
+	return string(body), err
+}
 
-	return string(resp.Body()), nil
+func registerSource(name string, fn ddns.SourceFunc) {
+	if err := ddns.RegisterSourceFunc(name, fn); err != nil {
+		panic(err)
+	}
 }

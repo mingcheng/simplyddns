@@ -16,28 +16,34 @@ package target
 
 import (
 	"context"
+	"fmt"
 	"net"
+	"net/http"
+	"strings"
 
 	cloudflare "github.com/cloudflare/cloudflare-go"
 	ddns "github.com/mingcheng/simplyddns"
 )
 
 func init() {
-	_ = ddns.RegisterTargetFunc("cloudflare",
+	registerTarget("cloudflare",
 		func(ctx context.Context, ip *net.IP, config *ddns.TargetConfig) error {
-			var (
-				err    error
-				client *CloudflareClient
-			)
-
-			if client, err = NewCloudflareDNSClient(config); err != nil {
+			if _, err := recordType(ip); err != nil {
 				return err
 			}
-
+			client, err := NewCloudflareDNSClient(config)
+			if err != nil {
+				return err
+			}
+			if config.Proxy != "" {
+				defer client.httpClient.CloseIdleConnections()
+			}
+			if len(config.Domains) == 0 {
+				return fmt.Errorf("cloudflare target requires at least one domain")
+			}
 			for _, domain := range config.Domains {
-				err = client.CreateOrUpdateRecord(context.Background(), domain, ip)
-				if err != nil {
-					return err
+				if err := client.CreateOrUpdateRecord(ctx, domain, ip); err != nil {
+					return fmt.Errorf("cloudflare %s: %w", domain, err)
 				}
 			}
 
@@ -48,33 +54,75 @@ func init() {
 type CloudflareClient struct {
 	client         *cloudflare.API
 	zoneIdentifier *cloudflare.ResourceContainer
+	httpClient     *http.Client
 }
 
 func (c CloudflareClient) CreateOrUpdateRecord(ctx context.Context, domain string, ip *net.IP) error {
+	kind, err := recordType(ip)
+	if err != nil {
+		return err
+	}
+	parsed, err := ddns.ParseDomain(domain)
+	if err != nil {
+		return err
+	}
+	domain = parsed.Hostname()
 	records, _, err := c.client.ListDNSRecords(ctx, c.zoneIdentifier, cloudflare.ListDNSRecordsParams{
-		Type: "A",
+		Type: kind,
+		Name: domain,
 	})
 
 	if err != nil {
 		return err
 	}
 
-	// prune the old records
+	found := false
 	for _, record := range records {
-		if record.Name == domain {
-			log.Warnf("remove the old records %s(%s)", record.Name, record.Content)
-			_ = c.DeleteRecord(ctx, record.ID)
+		if strings.EqualFold(strings.TrimSuffix(record.Name, "."), domain) && record.Type == kind {
+			found = true
+			if net.ParseIP(record.Content).Equal(*ip) {
+				continue
+			}
+			if err := c.updateRecord(ctx, record, ip); err != nil {
+				return err
+			}
 		}
 	}
-
+	if found {
+		return nil
+	}
 	return c.CreateRecord(ctx, domain, ip)
 }
 
 func (c CloudflareClient) UpdateRecord(ctx context.Context, recordID string, ip *net.IP) error {
-	log.Infof("update the cloudflare record %s with ip %s", recordID, ip)
-	_, err := c.client.UpdateDNSRecord(ctx, c.zoneIdentifier, cloudflare.UpdateDNSRecordParams{
-		ID:      recordID,
-		Content: ip.String(),
+	if _, err := recordType(ip); err != nil {
+		return err
+	}
+	record, err := c.client.GetDNSRecord(ctx, c.zoneIdentifier, recordID)
+	if err != nil {
+		return err
+	}
+	return c.updateRecord(ctx, record, ip)
+}
+
+func (c CloudflareClient) updateRecord(ctx context.Context, record cloudflare.DNSRecord, ip *net.IP) error {
+	kind, err := recordType(ip)
+	if err != nil {
+		return err
+	}
+	if record.Type != kind {
+		return fmt.Errorf("cannot update a %s record with a %s address", record.Type, kind)
+	}
+	log.Infof("update the cloudflare record %s with ip %s", record.ID, ip)
+	_, err = c.client.UpdateDNSRecord(ctx, c.zoneIdentifier, cloudflare.UpdateDNSRecordParams{
+		ID:       record.ID,
+		Content:  ip.String(),
+		TTL:      record.TTL,
+		Proxied:  record.Proxied,
+		Priority: record.Priority,
+		Comment:  &record.Comment,
+		Tags:     record.Tags,
+		Settings: record.Settings,
 	})
 	return err
 }
@@ -85,34 +133,39 @@ func (c CloudflareClient) DeleteRecord(ctx context.Context, recordID string) err
 }
 
 func (c CloudflareClient) CreateRecord(ctx context.Context, domain string, ip *net.IP) error {
+	kind, err := recordType(ip)
+	if err != nil {
+		return err
+	}
+	parsed, err := ddns.ParseDomain(domain)
+	if err != nil {
+		return err
+	}
 	log.Infof("create a new record for domain %s with ip %s", domain, ip)
-	_, err := c.client.CreateDNSRecord(ctx, c.zoneIdentifier, cloudflare.CreateDNSRecordParams{
-		Type:      "A",
-		Name:      domain,
-		Content:   ip.String(),
-		TTL:       60,
-		Proxiable: false,
+	_, err = c.client.CreateDNSRecord(ctx, c.zoneIdentifier, cloudflare.CreateDNSRecordParams{
+		Type:    kind,
+		Name:    parsed.Hostname(),
+		Content: ip.String(),
+		TTL:     60,
 	})
 
 	return err
 }
 
 func NewCloudflareDNSClient(config *ddns.TargetConfig) (*CloudflareClient, error) {
-	client, err := cloudflare.NewWithAPIToken(config.Token)
+	httpClient, err := newHTTPClient(config)
 	if err != nil {
 		return nil, err
 	}
-
-	zoneIdentifier := cloudflare.ZoneIdentifier(config.Key)
-
-	// check zone identifier whether is fine
-	_, _, err = client.ListDNSRecords(context.TODO(), zoneIdentifier, cloudflare.ListDNSRecordsParams{})
+	client, err := cloudflare.NewWithAPIToken(config.Token, cloudflare.HTTPClient(httpClient),
+		cloudflare.UserAgent(ddns.DefaultUserAgent))
 	if err != nil {
 		return nil, err
 	}
 
 	return &CloudflareClient{
 		client:         client,
-		zoneIdentifier: zoneIdentifier,
+		zoneIdentifier: cloudflare.ZoneIdentifier(config.Key),
+		httpClient:     httpClient,
 	}, nil
 }

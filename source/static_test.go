@@ -16,18 +16,30 @@ import (
 
 	"github.com/mingcheng/simplyddns"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSourceStatic(t *testing.T) {
-	const Address = "192.168.1.1"
 	fn, err := simplyddns.SourceFuncByName("static")
-	assert.NoError(t, err)
-	assert.NotNil(t, fn)
-
-	ip, err := fn(context.TODO(), &simplyddns.SourceConfig{
-		Content: Address,
-	})
-
-	assert.NoError(t, err)
-	assert.Equal(t, ip.String(), Address)
+	require.NoError(t, err)
+	for _, tc := range []struct{ content, want string }{
+		{"192.168.1.1", "192.168.1.1"},
+		{" 2001:db8::1\n", "2001:db8::1"},
+		{"", ""},
+		{"not-an-address", ""},
+	} {
+		t.Run(tc.content, func(t *testing.T) {
+			ip, err := fn(context.Background(), &simplyddns.SourceConfig{Content: tc.content})
+			if tc.want == "" {
+				require.Error(t, err)
+				assert.Nil(t, ip)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, ip)
+				assert.Equal(t, tc.want, ip.String())
+			}
+		})
+	}
+	_, err = fn(context.Background(), nil)
+	require.Error(t, err)
 }

@@ -16,21 +16,19 @@ package source
 
 import (
 	"context"
+	"fmt"
 	"net"
-	"strings"
 
 	ddns "github.com/mingcheng/simplyddns"
 )
 
 func init() {
 	fn := func(_ context.Context, source *ddns.SourceConfig) (*net.IP, error) {
-		addr := net.ParseIP(strings.TrimSpace(source.Content))
-		if addr == nil {
-			return nil, nil
+		if source == nil {
+			return nil, fmt.Errorf("static source configuration is nil")
 		}
-		log.Debugf("parsed address is %s", addr.String())
-		return &addr, nil
+		return parseIP(source.Content)
 	}
 
-	_ = ddns.RegisterSourceFunc("static", fn)
+	registerSource("static", fn)
 }

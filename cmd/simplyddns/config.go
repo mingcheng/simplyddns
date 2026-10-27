@@ -16,25 +16,58 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
+	"github.com/mingcheng/simplyddns"
 	"github.com/spf13/viper"
 )
 
-func init() {
-	viper.SetConfigType("yaml")
-	viper.SetConfigName(fmt.Sprintf("%s.yml", AppName))
-
-	// configuration lookup paths
-	viper.AddConfigPath(fmt.Sprintf("/etc/%s", AppName))
-	viper.AddConfigPath(fmt.Sprintf("$HOME/.config/%s", AppName))
-	viper.AddConfigPath(".")
+// ReadConfigure loads the default configuration file.
+func ReadConfigure(config *simplyddns.Config) error {
+	return readConfigure(config, "")
 }
 
-// ReadConfigure loads the configuration file and decodes it into config.
-func ReadConfigure(config interface{}) error {
-	if err := viper.ReadInConfig(); err != nil {
-		return err
+func readConfigure(config *simplyddns.Config, filename string, paths ...string) error {
+	if config == nil {
+		return fmt.Errorf("configuration destination is nil")
+	}
+	reader := viper.New()
+	reader.SetConfigType("yaml")
+	if filename != "" {
+		reader.SetConfigFile(filename)
+	} else {
+		reader.SetConfigName(AppName)
+		if len(paths) == 0 {
+			paths = append(paths, filepath.Join("/etc", AppName))
+			home, err := os.UserHomeDir()
+			if err != nil {
+				log.Debugf("home configuration directory unavailable: %v", err)
+			} else {
+				paths = append(paths, filepath.Join(home, ".config", AppName))
+			}
+			paths = append(paths, ".")
+		}
+		for _, path := range paths {
+			reader.AddConfigPath(path)
+		}
+	}
+	if err := reader.ReadInConfig(); err != nil {
+		return fmt.Errorf("read configuration: %w", err)
 	}
 
-	return viper.Unmarshal(config)
+	var decoded simplyddns.Config
+	if err := reader.Unmarshal(&decoded); err != nil {
+		return fmt.Errorf("decode configuration: %w", err)
+	}
+	if len(decoded.Jobs) == 0 {
+		return fmt.Errorf("at least one DDNS job is required")
+	}
+	for i := range decoded.Jobs {
+		if err := simplyddns.ValidateConfig(&decoded.Jobs[i]); err != nil {
+			return fmt.Errorf("job %d: %w", i+1, err)
+		}
+	}
+	*config = decoded
+	return nil
 }

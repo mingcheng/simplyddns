@@ -13,7 +13,7 @@
 ##
 
 logfile: /dev/stdout
-debug: True
+debug: true
 
 ddns:
   - source:
@@ -21,8 +21,7 @@ ddns:
       interval: 3600
     target:
       type: cloudflare
-      key:
-      token:
+      key: "<your-zone-id>"
+      token: "<your-api-token>"
       domains:
-        - 1.intkd.com
-        - 2.intkd.com
+        - home.example.com

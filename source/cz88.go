@@ -25,19 +25,17 @@ func init() {
 		if err != nil {
 			return nil, err
 		}
+		if !gjson.Valid(data) {
+			return nil, fmt.Errorf("cz88 returned invalid JSON")
+		}
 
 		statusCode := gjson.Get(data, "code").Int()
 		if statusCode != http.StatusOK {
 			return nil, fmt.Errorf("status code is %d", statusCode)
 		}
 
-		if result := gjson.Get(data, "data.ip").Str; result != "" {
-			ip := net.ParseIP(result)
-			return &ip, nil
-		}
-
-		return nil, fmt.Errorf("can not found address from %s", Name)
+		return parseIP(gjson.Get(data, "data.ip").Str)
 	}
 
-	_ = simplyddns.RegisterSourceFunc(Name, fn)
+	registerSource(Name, fn)
 }

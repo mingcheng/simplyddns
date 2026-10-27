@@ -25,9 +25,15 @@ import (
 func init() {
 	log.Tracef("register target function which name is sleep")
 
-	_ = ddns.RegisterTargetFunc("sleep", func(_ context.Context, addr *net.IP, _ *ddns.TargetConfig) error {
+	registerTarget("sleep", func(ctx context.Context, addr *net.IP, _ *ddns.TargetConfig) error {
 		log.Debugf("sleep target, received address %s", addr.String())
-		time.Sleep(10 * time.Second)
-		return nil
+		timer := time.NewTimer(10 * time.Second)
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-timer.C:
+			return nil
+		}
 	})
 }

@@ -24,13 +24,9 @@ import (
 func init() {
 	const Name = "myip"
 
-	fn := func(_ context.Context, _ *simplyddns.SourceConfig) (*net.IP, error) {
-		data, err := RawIPByURL("https://api.my-ip.io/ip.txt")
-		if err != nil {
-			return nil, err
-		}
-		return &data, nil
+	fn := func(ctx context.Context, _ *simplyddns.SourceConfig) (*net.IP, error) {
+		return rawIPByURL(ctx, "https://api.my-ip.io/ip.txt", nil)
 	}
 
-	_ = simplyddns.RegisterSourceFunc(Name, fn)
+	registerSource(Name, fn)
 }

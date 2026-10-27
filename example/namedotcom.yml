@@ -9,11 +9,11 @@
 ###
 
 logfile: "/var/log/simplyddns.log"
-debug: Yes
+debug: true
 
 ddns:
   - source:
-      type: "myipip"
+      type: "ipip"
       interval: 3600
     target:
       type: namedotcom

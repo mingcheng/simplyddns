@@ -9,7 +9,7 @@
  * File Created: 2025-07-14
  *
  * Modified By: mingcheng <mingcheng@apache.org>
- * Last Modified: 2026-05-12 12:12:02
+ * Last Modified: 2026-10-27 14:49:46
  */
 
 package simplyddns
@@ -30,5 +30,5 @@ const (
 	DefaultTimeout = 30 * time.Second
 
 	// DefaultUserAgent is the default user agent for HTTP requests
-	DefaultUserAgent = "SimpleDDNS/1.0"
+	DefaultUserAgent = "SimplyDDNS/2.0.0"
 )

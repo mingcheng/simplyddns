@@ -16,9 +16,11 @@ package target
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 
+	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	alidns "github.com/aliyun/alibaba-cloud-sdk-go/services/alidns"
 	"github.com/mingcheng/simplyddns"
 )
@@ -27,103 +29,111 @@ import (
 type AliDNS struct {
 	Client  *alidns.Client
 	Config  *simplyddns.TargetConfig
-	domains map[string]*alidns.DomainInDescribeDomains
 	records map[string]*alidns.Record
 }
 
+var errRecordNotFound = errors.New("DNS record not found")
+
 // NewAliDNS for creating a new instance of AliDNS
 func NewAliDNS(config *simplyddns.TargetConfig) (*AliDNS, error) {
-	var (
-		err        error
-		client     *alidns.Client
-		allDomains []alidns.DomainInDescribeDomains
-	)
-	client, err = alidns.NewClientWithAccessKey("cn-hangzhou", config.Key, config.Token)
+	return newAliDNS(context.Background(), config)
+}
+
+func newAliDNS(ctx context.Context, config *simplyddns.TargetConfig) (*AliDNS, error) {
+	httpClient, err := newHTTPClient(config)
 	if err != nil {
 		return nil, err
 	}
-
-	instance := &AliDNS{
-		Client:  client,
-		Config:  config,
-		domains: map[string]*alidns.DomainInDescribeDomains{},
-		records: map[string]*alidns.Record{},
-	}
-
-	if allDomains, err = instance.All(); err != nil {
+	client, err := alidns.NewClientWithAccessKey("cn-hangzhou", config.Key, config.Token)
+	if err != nil {
 		return nil, err
 	}
-
-	// cache the domain
-	if len(allDomains) > 0 {
-		for _, v := range allDomains {
-			instance.domains[v.DomainName] = &v
-		}
-	}
-
-	return instance, nil
+	client.SetTransport(contextTransport{ctx: ctx, base: httpClient.Transport})
+	client.SetReadTimeout(simplyddns.DefaultTimeout)
+	client.SetConnectTimeout(simplyddns.DefaultTimeout)
+	return &AliDNS{
+		Client:  client,
+		Config:  config,
+		records: map[string]*alidns.Record{},
+	}, nil
 }
 
 // All to get all domains
 func (a *AliDNS) All() ([]alidns.DomainInDescribeDomains, error) {
-	req := alidns.CreateDescribeDomainsRequest()
-	domains, err := a.Client.DescribeDomains(req)
-	if err != nil {
-		return nil, err
+	var all []alidns.DomainInDescribeDomains
+	for page := 1; ; page++ {
+		req := alidns.CreateDescribeDomainsRequest()
+		req.Scheme = "https"
+		req.PageNumber = requests.NewInteger(page)
+		req.PageSize = requests.NewInteger(100)
+		resp, err := a.Client.DescribeDomains(req)
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, resp.Domains.Domain...)
+		if int64(len(all)) >= resp.TotalCount {
+			return all, nil
+		}
+		if len(resp.Domains.Domain) == 0 {
+			return nil, fmt.Errorf("alidns returned an empty domain page before the end of the list")
+		}
 	}
-
-	if domains.TotalCount == int64(len(domains.Domains.Domain)) {
-		return domains.Domains.Domain, nil
-	}
-
-	return []alidns.DomainInDescribeDomains{}, nil
 }
 
 // GetRecord to get a single DNS record
 func (a *AliDNS) GetRecord(domain string) (*alidns.Record, error) {
+	return a.getRecord(domain, "A")
+}
+
+func (a *AliDNS) getRecord(domain, kind string) (*alidns.Record, error) {
 	tld, err := simplyddns.ParseDomain(domain)
 	if err != nil {
 		return nil, err
 	}
 
-	key := fmt.Sprintf("%s.%s", tld.Domain, tld.TLD)
-	if a.domains[key] == nil {
-		return nil, fmt.Errorf("domain %s is not found", key)
-	}
-
-	if a.records[domain] != nil {
-		return a.records[domain], nil
+	key := kind + " " + tld.Hostname()
+	if a.records[key] != nil {
+		return a.records[key], nil
 	}
 
 	req := alidns.CreateDescribeSubDomainRecordsRequest()
-	req.SubDomain = domain
-	req.DomainName = tld.Subdomain
-	req.Type = "A"
-	// req.Type= "AAAA"
+	req.Scheme = "https"
+	req.SubDomain = tld.Hostname()
+	req.DomainName = tld.Domain + "." + tld.TLD
+	req.Type = kind
 
 	resp, err := a.Client.DescribeSubDomainRecords(req)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.TotalCount <= 0 {
-		return nil, fmt.Errorf("%v record is not found", domain)
+	if len(resp.DomainRecords.Record) == 0 {
+		if resp.TotalCount > 0 {
+			return nil, fmt.Errorf("alidns returned an empty record list with a nonzero count")
+		}
+		return nil, fmt.Errorf("%s: %w", domain, errRecordNotFound)
 	}
-
-	// only get first record
-	record := resp.DomainRecords.Record[0]
-	a.records[domain] = &record
-	return &record, nil
+	for _, record := range resp.DomainRecords.Record {
+		if record.Type == kind {
+			a.records[key] = &record
+			return &record, nil
+		}
+	}
+	return nil, fmt.Errorf("alidns returned no %s records for %s despite a nonempty result", kind, domain)
 }
 
 // UpdateRecord updates an existing DNS record.
 func (a *AliDNS) UpdateRecord(domain string, ip *net.IP) (*alidns.UpdateDomainRecordResponse, error) {
+	kind, err := recordType(ip)
+	if err != nil {
+		return nil, err
+	}
 	tld, err := simplyddns.ParseDomain(domain)
 	if err != nil {
 		return nil, err
 	}
 
-	record, err := a.GetRecord(domain)
+	record, err := a.getRecord(domain, kind)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +142,9 @@ func (a *AliDNS) UpdateRecord(domain string, ip *net.IP) (*alidns.UpdateDomainRe
 	request.Scheme = "https"
 
 	request.Value = ip.String()
-	request.Type = "A"
+	request.Type = kind
+	request.TTL = requests.NewInteger64(record.TTL)
+	request.Line = record.Line
 
 	if tld.Subdomain == "" {
 		request.RR = "@"
@@ -141,11 +153,19 @@ func (a *AliDNS) UpdateRecord(domain string, ip *net.IP) (*alidns.UpdateDomainRe
 	}
 	request.RecordId = record.RecordId
 
-	return a.Client.UpdateDomainRecord(request)
+	resp, err := a.Client.UpdateDomainRecord(request)
+	if err == nil {
+		record.Value = ip.String()
+	}
+	return resp, err
 }
 
 // CreateRecord to create a new DNS record
 func (a *AliDNS) CreateRecord(domain string, ip *net.IP) (*alidns.AddDomainRecordResponse, error) {
+	kind, err := recordType(ip)
+	if err != nil {
+		return nil, err
+	}
 	tld, err := simplyddns.ParseDomain(domain)
 	if err != nil {
 		return nil, err
@@ -153,7 +173,7 @@ func (a *AliDNS) CreateRecord(domain string, ip *net.IP) (*alidns.AddDomainRecor
 
 	request := alidns.CreateAddDomainRecordRequest()
 	request.Scheme = "https"
-	request.Type = "A"
+	request.Type = kind
 	request.Value = ip.String()
 	request.DomainName = fmt.Sprintf("%s.%s", tld.Domain, tld.TLD)
 
@@ -168,25 +188,36 @@ func (a *AliDNS) CreateRecord(domain string, ip *net.IP) (*alidns.AddDomainRecor
 
 // init to register the function to dispatcher
 func init() {
-	_ = simplyddns.RegisterTargetFunc("alidns",
+	registerTarget("alidns",
 		func(ctx context.Context, ip *net.IP, config *simplyddns.TargetConfig) error {
-			var (
-				err    error
-				client *AliDNS
-			)
-
-			if client, err = NewAliDNS(config); err != nil {
+			kind, err := recordType(ip)
+			if err != nil {
 				return err
 			}
-
+			client, err := newAliDNS(ctx, config)
+			if err != nil {
+				return err
+			}
+			if len(config.Domains) == 0 {
+				return fmt.Errorf("alidns target requires at least one domain")
+			}
 			for _, domain := range config.Domains {
-				if record, _ := client.GetRecord(domain); record != nil {
-					_, err = client.UpdateRecord(domain, ip)
-				} else {
+				record, err := client.getRecord(domain, kind)
+				switch {
+				case errors.Is(err, errRecordNotFound):
 					_, err = client.CreateRecord(domain, ip)
+				case err != nil:
+					return fmt.Errorf("alidns %s: %w", domain, err)
+				case net.ParseIP(record.Value).Equal(*ip):
+					continue
+				default:
+					_, err = client.UpdateRecord(domain, ip)
+				}
+				if err != nil {
+					return fmt.Errorf("alidns %s: %w", domain, err)
 				}
 			}
 
-			return err
+			return nil
 		})
 }

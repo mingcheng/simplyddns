@@ -16,8 +16,9 @@ package source
 
 import (
 	"context"
+	"fmt"
 	"net"
-	"regexp"
+	"strings"
 
 	"github.com/mingcheng/simplyddns"
 )
@@ -31,17 +32,15 @@ func init() {
 			return nil, err
 		}
 
-		var re = regexp.MustCompile(`(?m)ip=([\d.]+)`)
-
-		for _, match := range re.FindAllStringSubmatch(data, -1) {
-			if match[1] != "" {
-				addr := net.ParseIP(match[1])
-				return &addr, nil
+		for _, line := range strings.Split(data, "\n") {
+			key, value, ok := strings.Cut(strings.TrimSpace(line), "=")
+			if ok && key == "ip" {
+				return parseIP(value)
 			}
 		}
 
-		return nil, nil
+		return nil, fmt.Errorf("cloudflare trace does not contain an IP address")
 	}
 
-	_ = simplyddns.RegisterSourceFunc(Name, fn)
+	registerSource(Name, fn)
 }

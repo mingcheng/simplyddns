@@ -9,11 +9,11 @@
 ###
 
 logfile: "/dev/stderr"
-debug: Yes
+debug: true
 
 ddns:
   - source:
-      type: "myipip"
+      type: "ipip"
       interval: 3600
     target:
       type: alidns

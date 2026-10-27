@@ -18,6 +18,9 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"slices"
+	"strings"
+	"sync"
 )
 
 // SourceFunc resolves the current IP address from a configured source.
@@ -29,19 +32,26 @@ type TargetFunc func(context.Context, *net.IP, *TargetConfig) error
 var (
 	sourceFuncs = map[string]SourceFunc{}
 	targetFuncs = map[string]TargetFunc{}
+	registryMu  sync.RWMutex
 )
 
 // GetAllSupportSourceFunc returns the names of every registered source function.
 func GetAllSupportSourceFunc() []string {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
 	names := make([]string, 0, len(sourceFuncs))
 	for k := range sourceFuncs {
 		names = append(names, k)
 	}
+	slices.Sort(names)
 	return names
 }
 
 // SourceFuncByName looks up a registered source function by name.
 func SourceFuncByName(name string) (SourceFunc, error) {
+	name = strings.ToLower(strings.TrimSpace(name))
+	registryMu.RLock()
+	defer registryMu.RUnlock()
 	fn, ok := sourceFuncs[name]
 	if !ok {
 		return nil, fmt.Errorf("source function %q is not found", name)
@@ -52,6 +62,12 @@ func SourceFuncByName(name string) (SourceFunc, error) {
 // RegisterSourceFunc registers a new source function under the given name.
 // It returns an error if a function with the same name is already registered.
 func RegisterSourceFunc(name string, fn SourceFunc) error {
+	name = strings.ToLower(strings.TrimSpace(name))
+	if name == "" || fn == nil {
+		return fmt.Errorf("source name and function must not be empty")
+	}
+	registryMu.Lock()
+	defer registryMu.Unlock()
 	if _, exists := sourceFuncs[name]; exists {
 		return fmt.Errorf("source func %q is already registered", name)
 	}
@@ -61,6 +77,9 @@ func RegisterSourceFunc(name string, fn SourceFunc) error {
 
 // TargetFuncByName looks up a registered target function by name.
 func TargetFuncByName(name string) (TargetFunc, error) {
+	name = strings.ToLower(strings.TrimSpace(name))
+	registryMu.RLock()
+	defer registryMu.RUnlock()
 	fn, ok := targetFuncs[name]
 	if !ok {
 		return nil, fmt.Errorf("target function %q is not found", name)
@@ -71,6 +90,12 @@ func TargetFuncByName(name string) (TargetFunc, error) {
 // RegisterTargetFunc registers a new target function under the given name.
 // It returns an error if a function with the same name is already registered.
 func RegisterTargetFunc(name string, fn TargetFunc) error {
+	name = strings.ToLower(strings.TrimSpace(name))
+	if name == "" || fn == nil {
+		return fmt.Errorf("target name and function must not be empty")
+	}
+	registryMu.Lock()
+	defer registryMu.Unlock()
 	if _, exists := targetFuncs[name]; exists {
 		return fmt.Errorf("target func %q is already registered", name)
 	}

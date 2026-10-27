@@ -9,7 +9,7 @@
 ###
 
 logfile: "/dev/stderr"
-debug: Yes
+debug: true
 
 ddns:
   - source:
@@ -17,5 +17,3 @@ ddns:
       interval: 60 # 1 minute
     target:
       type: "sleep"
-    webhook:
-      url: "https://httpbin.org/post"

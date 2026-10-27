@@ -9,7 +9,7 @@
 ###
 
 logfile: "/dev/stderr"
-debug: Yes
+debug: true
 
 ddns:
   - source:

@@ -9,13 +9,13 @@
 ###
 
 logfile: "/dev/stderr"
-debug: Yes
+debug: true
 
 ddns:
   - source:
-      type: ipify,myip,whatis
+      type: ipify,ipsb,opendns
       interval: 30 # sec
     target:
       type: "sleep"
     webhook:
-      url: "https://httpbin.org/post"
+      url: "https://example.com/webhook"

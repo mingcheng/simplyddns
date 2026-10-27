@@ -15,14 +15,17 @@
 package simplyddns
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
+	"slices"
 	"strings"
+	"sync"
 	"time"
-
-	"github.com/go-resty/resty/v2"
 )
 
 // SourceConfig describes how a source function obtains the public IP address.
@@ -63,120 +66,125 @@ type Job struct {
 	Config     *JobConfig
 	SourceFunc []SourceFunc
 	TargetFunc TargetFunc
-	ticker     *time.Ticker
-	done       chan bool
+	stopCtx    context.Context
+	cancel     context.CancelFunc
+	startOnce  sync.Once
+	timeout    time.Duration
 	lastIP     net.IP
 }
 
 // RunWebhook triggers the configured webhook after a successful address update.
 func (j *Job) RunWebhook(ctx context.Context, addr string, domains []string) error {
-	client := resty.New()
-
-	request := client.R().
-		SetContext(ctx).
-		SetHeader("Address", addr).
-		SetHeader("Domains", strings.Join(domains, ",")).
-		SetBody(map[string]interface{}{
-			"address": addr,
-			"domains": strings.Join(domains, ","),
-			"now":     time.Now(),
-		})
-
+	if j.Config == nil {
+		return fmt.Errorf("job configuration is nil")
+	}
+	domainList := strings.Join(domains, ",")
+	body, err := json.Marshal(struct {
+		Address string    `json:"address"`
+		Domains string    `json:"domains"`
+		Now     time.Time `json:"now"`
+	}{addr, domainList, time.Now()})
+	if err != nil {
+		return err
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, j.Config.WebHook.Url, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("User-Agent", DefaultUserAgent)
+	request.Header.Set("Address", addr)
+	request.Header.Set("Domains", domainList)
 	if token := j.Config.WebHook.Token; token != "" {
-		request.SetAuthToken(token)
+		request.Header.Set("Authorization", "Bearer "+token)
 	}
 
 	if username := j.Config.WebHook.UserName; username != "" {
 		request.SetBasicAuth(username, j.Config.WebHook.Password)
 	}
 
-	resp, err := request.Post(j.Config.WebHook.Url)
+	client := &http.Client{Timeout: DefaultTimeout}
+	resp, err := client.Do(request)
 	if err != nil {
 		return err
 	}
 
-	if resp.StatusCode() != http.StatusOK {
-		return fmt.Errorf("webhook returned non-OK status: %s", resp.Status())
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("webhook returned status %s", resp.Status)
 	}
-
-	return nil
+	_, err = io.Copy(io.Discard, resp.Body)
+	return err
 }
 
 // Start runs the job loop until Stop is called or the context is done. Each
 // tick fetches the address from the source, optionally validates it against
 // the configured domains and applies the target function.
 func (j *Job) Start(ctx context.Context) {
-	for {
-		select {
-		case <-j.ticker.C:
-			config := j.Config
-
-			// validate the job configure
-			if err := ValidateConfig(config); err != nil {
-				log.Errorf("validate job configure failed, %v", err)
-				continue
-			}
-
-			// run source function
-			addr, err := j.Source(ctx, &config.Source)
-			if err != nil || addr == nil || addr.String() == "" {
-				if err != nil {
-					log.Error(err)
+	j.startOnce.Do(func() {
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		stop := context.AfterFunc(j.stopCtx, cancel)
+		defer stop()
+		ticker := time.NewTicker(time.Duration(j.Config.Source.Interval) * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				if err := j.run(ctx); err != nil && ctx.Err() == nil {
+					log.Warnf("DDNS job failed: %v", err)
 				}
-				continue
+			case <-j.stopCtx.Done():
+				return
+			case <-ctx.Done():
+				return
 			}
+		}
+	})
+}
 
-			log.Debugf("got address from source %q, value is %s", config.Source.Type, addr.String())
-
-			// ignore the same ip address
-			if j.lastIP != nil && j.lastIP.Equal(*addr) {
-				log.Debugf("ignore the cached address %s", addr.String())
-				continue
-			}
-
-			domains := config.Target.Domains
-			if len(domains) > 0 {
-				// if ValidateRecords returns nil every domain already points
-				// to the current address, so there is nothing to do.
-				if err := ValidateRecords(domains, addr); err == nil {
-					log.Debugf("dns records already point to %s, skip", addr.String())
-					continue
-				}
-			}
-
-			// run the target function
-			if err := j.TargetFunc(ctx, addr, &config.Target); err != nil {
-				log.Warn(err)
-				continue
-			}
-			log.Infof("target function executed successfully")
-
-			// cache the last ip address
-			j.lastIP = *addr
-
-			// trigger the webhook if configured
-			if config.WebHook.Url != "" {
-				log.Tracef("triggering webhook %s", config.WebHook.Url)
-				if err := j.RunWebhook(ctx, addr.String(), domains); err != nil {
-					log.Warnf("webhook failed: %v", err)
-				} else {
-					log.Infof("webhook %s finished", config.WebHook.Url)
-				}
-			}
-		case <-j.done:
-			j.ticker.Stop()
-			return
-		case <-ctx.Done():
-			j.ticker.Stop()
-			return
+func (j *Job) run(ctx context.Context) error {
+	timeout := j.timeout
+	if timeout <= 0 {
+		timeout = DefaultTimeout
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	addr, err := j.Source(ctx, &j.Config.Source)
+	if err != nil {
+		return err
+	}
+	if j.lastIP.Equal(*addr) {
+		log.Debugf("ignore the cached address %s", addr)
+		return nil
+	}
+	domains := j.Config.Target.Domains
+	if len(domains) > 0 {
+		if err := ValidateRecordsContext(ctx, domains, addr); err == nil {
+			log.Debugf("DNS records already point to %s", addr)
+			return nil
 		}
 	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if err := j.TargetFunc(ctx, addr, &j.Config.Target); err != nil {
+		return fmt.Errorf("update target: %w", err)
+	}
+	j.lastIP = slices.Clone(*addr)
+	log.Infof("target function executed successfully")
+	if j.Config.WebHook.Url != "" {
+		if err := j.RunWebhook(ctx, addr.String(), domains); err != nil {
+			return fmt.Errorf("webhook failed after DNS update: %w", err)
+		}
+	}
+	return nil
 }
 
 // Stop signals the job loop to exit.
 func (j *Job) Stop() {
 	log.Debug("stopping job")
-	j.done <- true
+	j.cancel()
 }
 
 // Source executes every registered source function for this job and returns
@@ -193,21 +201,32 @@ func (j *Job) Source(ctx context.Context, config *SourceConfig) (*net.IP, error)
 	)
 
 	for _, fn := range j.SourceFunc {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		if fn == nil {
+			return nil, fmt.Errorf("source function is nil")
+		}
 		addr, err := fn(ctx, config)
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		if err == nil && (addr == nil || addr.To16() == nil) {
+			err = fmt.Errorf("source returned an invalid IP address")
+		}
 		if err != nil {
 			log.Errorf("source function error (%d): %v", errTimes, err)
 			errTimes++
 			continue
 		}
 
-		if addr == nil {
-			continue
-		}
-
 		if lastAddr != nil && !addr.Equal(lastAddr) {
 			return nil, fmt.Errorf("fetched addresses do not match: %v vs %v", lastAddr, addr)
 		}
-		lastAddr = *addr
+		lastAddr = slices.Clone(*addr)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 
 	// allow some tolerance when multiple source functions are configured
@@ -224,12 +243,12 @@ func (j *Job) Source(ctx context.Context, config *SourceConfig) (*net.IP, error)
 
 // NewJob creates a new Job from the given JobConfig.
 func NewJob(config JobConfig) (*Job, error) {
-	if config.Source.Type == "" || config.Target.Type == "" {
-		return nil, fmt.Errorf("source or target type can not be empty")
+	if err := ValidateConfig(&config); err != nil {
+		return nil, err
 	}
 
 	// set default interval if not specified or too small
-	if config.Source.Interval <= 0 {
+	if config.Source.Interval == 0 {
 		config.Source.Interval = DefaultInterval
 	} else if config.Source.Interval < MinInterval {
 		config.Source.Interval = MinInterval
@@ -237,13 +256,9 @@ func NewJob(config JobConfig) (*Job, error) {
 
 	// the source type may contain multiple comma-separated names
 	types := strings.Split(config.Source.Type, ",")
-	if len(types) == 0 {
-		return nil, fmt.Errorf("source type %q is empty", config.Source.Type)
-	}
-
 	sourceFuncs := make([]SourceFunc, 0, len(types))
 	for _, v := range types {
-		fn, err := SourceFuncByName(strings.ToLower(strings.TrimSpace(v)))
+		fn, err := SourceFuncByName(v)
 		if err != nil {
 			return nil, err
 		}
@@ -254,12 +269,22 @@ func NewJob(config JobConfig) (*Job, error) {
 	if err != nil {
 		return nil, err
 	}
+	config.Target.Domains = slices.Clone(config.Target.Domains)
+	for i, domain := range config.Target.Domains {
+		parsed, err := ParseDomain(domain)
+		if err != nil {
+			return nil, err
+		}
+		config.Target.Domains[i] = parsed.Hostname()
+	}
 
+	stopCtx, cancel := context.WithCancel(context.Background())
 	return &Job{
 		SourceFunc: sourceFuncs,
 		TargetFunc: fnTarget,
 		Config:     &config,
-		ticker:     time.NewTicker(time.Second * time.Duration(config.Source.Interval)),
-		done:       make(chan bool, 1),
+		stopCtx:    stopCtx,
+		cancel:     cancel,
+		timeout:    DefaultTimeout,
 	}, nil
 }

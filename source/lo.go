@@ -16,7 +16,6 @@ package source
 
 import (
 	"context"
-	"fmt"
 	"net"
 
 	ddns "github.com/mingcheng/simplyddns"
@@ -24,13 +23,9 @@ import (
 
 func init() {
 	fn := func(_ context.Context, _ *ddns.SourceConfig) (*net.IP, error) {
-		ip := net.ParseIP("127.0.0.1")
-		if !ip.IsLoopback() {
-			return nil, fmt.Errorf("%v is not a loopback address", ip)
-		}
-
+		ip := net.IPv4(127, 0, 0, 1)
 		return &ip, nil
 	}
 
-	_ = ddns.RegisterSourceFunc("lo", fn)
+	registerSource("lo", fn)
 }
