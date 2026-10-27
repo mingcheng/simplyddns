@@ -1,0 +1,28 @@
+name: Set up Go tools with mise
+description: Install pinned tools and cache Go modules and build outputs
+inputs:
+  tools:
+    description: Space-separated mise tools to install
+    default: go make actionlint shellcheck hadolint
+runs:
+  using: composite
+  steps:
+    - uses: jdx/mise-action@v5
+      with:
+        version: 2026.10.18
+        install_args: ${{ inputs.tools }}
+        cache: ${{ !env.ACT }}
+    - name: Locate Go caches
+      id: paths
+      shell: bash
+      run: |
+        echo "modules=$(mise exec go -- go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
+        echo "build=$(mise exec go -- go env GOCACHE)" >> "$GITHUB_OUTPUT"
+    - uses: actions/cache@v5
+      if: ${{ !env.ACT }}
+      with:
+        path: |
+          ${{ steps.paths.outputs.modules }}
+          ${{ steps.paths.outputs.build }}
+        key: go-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', 'go.mod', 'go.sum') }}
+        restore-keys: go-${{ runner.os }}-${{ runner.arch }}-

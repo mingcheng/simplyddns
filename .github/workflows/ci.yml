@@ -6,12 +6,9 @@ on:
       - main
       - master
       - develop
+      - "release/**"
   pull_request:
   workflow_dispatch:
-
-env:
-  CGO_ENABLED: "0"
-  GOPROXY: "https://goproxy.cn,direct"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -25,30 +22,67 @@ permissions:
   contents: read
 
 jobs:
-  verify:
-    name: Verify Go project
+  checks:
+    name: Lint, race tests and release artifacts
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
+      - uses: ./.github/actions/setup
+
+      - name: Check project
+        run: mise exec make -- make check
+
+      - name: Build and smoke-test binary
+        run: |
+          mise exec make -- make build
+          ./simplyddns --version
+
+      - name: Verify release artifacts
+        run: mise exec make -- make verify-dist
+
+      - name: Upload coverage
+        if: ${{ always() && !env.ACT }}
+        uses: actions/upload-artifact@v7
         with:
-          go-version-file: go.mod
-          cache: true
+          name: coverage
+          path: coverage.out
+          if-no-files-found: warn
 
-      - name: Download Go modules
-        run: go mod download
+      - name: Upload release candidates
+        if: ${{ !env.ACT }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-candidates
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/checksums.txt
+          if-no-files-found: error
 
-      - name: Run tests
-        run: make test
-
-      - name: Run vet
-        run: go vet ./...
-
-      - name: Build binary
-        run: make build
-
-      - name: Build release artifacts
-        run: make dist
+  platforms:
+    name: Tests on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          tools: go
+      - name: Test and build
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          mise exec go -- go test ./...
+          mise exec go -- go build ./cmd/simplyddns
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            ./simplyddns.exe --version
+          else
+            ./simplyddns --version
+          fi

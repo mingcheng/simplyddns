@@ -1,3 +1,11 @@
 [tools]
 go = "1.27.3"
-task = "latest"
+make = "4.4.1"
+actionlint = "1.7.12"
+shellcheck = "0.11.0"
+hadolint = "2.15.1"
+act = "0.2.89"
+"go:golang.org/x/vuln/cmd/govulncheck" = "1.9.0"
+
+[env]
+GOTOOLCHAIN = "local"

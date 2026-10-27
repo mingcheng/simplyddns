@@ -18,28 +18,20 @@ on:
   push:
     branches:
       - develop
-
-env:
-  GOPRIVATE: ".github.com,git.guanwaii.com"
-  GOPROXY: "https://goproxy.cn,direct"
+      - main
+      - master
+      - "release/**"
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: ["1.22", "1.23", "1.24"]
-
     steps:
-      - uses: actions/checkout@v4
-      - name: set go with version ${{ matrix.go-version }}
-        uses: actions/setup-go@v4
+      - uses: actions/checkout@v7
+      - name: Set up tools with mise
+        uses: jdx/mise-action@v5
         with:
-          go-version: ${{ matrix.go-version }}
-      - run: |
-          env
-          id
-          uname -a
-          go version
-          go env
-          make build
+          version: 2026.10.18
+          install_args: go make
+          cache: false
+          github_token: ""
+      - run: mise exec make -- make test vet build

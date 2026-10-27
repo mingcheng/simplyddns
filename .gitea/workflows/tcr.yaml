@@ -24,24 +24,37 @@ jobs:
   push_to_registry:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - id: commit
-        uses: prompt/actions-commit-hash@v3
-      - id: meta
-        uses: docker/metadata-action@v5
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5
         with:
-          driver-opts: image=moby/buildkit:v0.12.4
-      - uses: docker/login-action@v3
+          version: 2026.10.18
+          install_args: make docker-cli
+          cache: false
+          github_token: ""
+      - id: meta
+        run: |
+          commit=$(git rev-parse --short HEAD)
+          version=$(mise exec make -- make --no-print-directory -s version)
+          {
+            echo "commit=$commit"
+            echo "version=$version-dev.$commit"
+            echo "build_time=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          } >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
         with:
           username: ${{ secrets.TCR_USERNAME }}
           password: ${{ secrets.TCR_PASSWORD }}
           registry: ccr.ccs.tencentyun.com
-      - uses: docker/build-push-action@v5
+      - uses: docker/build-push-action@v7
         with:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ccr.ccs.tencentyun.com/mingcheng/simpleddns:latest
-            ccr.ccs.tencentyun.com/mingcheng/simpleddns:${{ steps.commit.outputs.short }}
+            ccr.ccs.tencentyun.com/mingcheng/simpleddns:${{ steps.meta.outputs.commit }}
+          build-args: |
+            VERSION=${{ steps.meta.outputs.version }}
+            BUILD_TIME=${{ steps.meta.outputs.build_time }}
+            BUILD_COMMIT=${{ steps.meta.outputs.commit }}

@@ -11,6 +11,12 @@ vendor
 
 simplyddns
 simplyddns_*
+simplyddns.yml
+simplyddns.yaml
+.env
+.env.*
+mise.local.toml
+.mise.local.toml
 *.exe
 *.test
 *.out
