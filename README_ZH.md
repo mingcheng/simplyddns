@@ -8,7 +8,6 @@
 - [扩展](#扩展)
   - [source](#source)
   - [target](#target)
-- [开发与发布](#开发与发布)
 - [FAQ](#faq)
   - [WebHook 的配置](#webhook-的配置)
 
@@ -125,29 +124,6 @@ _cloudflare_
 使用 Cloudflare，`key` 为 Zone ID，`token` 需具有该区域的 DNS 编辑权限。更新采用原地修改，保留记录 ID、TTL、代理开关及其他设置。配置参见 [example/cloudflare.yml](example/cloudflare.yml)。
 
 以上三个 DNS target 均可通过 `proxy` 配置 SOCKS5 代理，格式为 `host:port`。
-
-## 开发与发布
-
-```sh
-mise exec -- make check       # 格式、依赖一致性、vet、单元测试、race/覆盖率、CI 与 Dockerfile 检查
-mise exec -- make vulncheck   # 可达依赖漏洞检查
-mise exec -- make verify-dist
-mise exec -- make release     # 完整发布检查；不会创建 tag、推送或发布
-```
-
-测试采用本地 HTTP 模拟和 DNS 桩，不读取服务商凭据、不修改真实 DNS。覆盖率写入 `coverage.out`。发布验证会检查包内文件、SHA-256、目标系统/架构、Go 版本、CGO 关闭状态，以及当前平台可执行文件的 `--version` 输出。
-
-打包需要主机提供常规 shell 和归档工具（`tar`、`zip`、`shasum`）；可选的 macOS `darwin_universal` 目标还需要平台自带的 `lipo`。`make clean` 只清理生成的文件，不递归删除整个分发目录。
-
-GitHub CI 覆盖 Linux、macOS、Windows，执行 race 检查并上传候选发布包；安全检查使用 CodeQL 和 mise 固定版本的 govulncheck。容器构建也会先运行测试。
-
-发布 2.0.0 前：
-
-1. 审核 [CHANGELOG.md](CHANGELOG.md)，填写发布日期，并确认 `make version` 输出为 `2.0.0`。
-2. 执行 `mise exec -- make release`，并等待所有 CI 任务通过。
-3. 提交审核后的变更，再创建和推送 `v2.0.0` 标签。
-
-发布工作流只检出已存在的版本标签，检查标签与 Makefile 版本一致，重新通过发布检查后才上传压缩包及校验和。手动触发同样要求标签已存在，不会把所选分支冒充成另一个版本发布。预发布版本会正确标记，也不会提升为容器的稳定 `latest` 标签。
 
 ## FAQ
 

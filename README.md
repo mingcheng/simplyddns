@@ -8,11 +8,10 @@
 - [Extensions](#extensions)
   - [source](#source)
   - [target](#target)
-- [Development and release](#development-and-release)
 - [FAQ](#faq)
   - [WebHook Configuration](#webhook-configuration)
 
-SimplyDDNS is a universal DDNS tool that can be used to update domain name records based on obtained IP addresses. It is designed to be flexible and easy to extend. A Chinese version is available in [README_ZH.md](README_ZH.md).
+SimplyDDNS is a universal DDNS tool that can be used to update domain name records based on obtained IP addresses. It is designed to be flexible and easy to extend. A Chinese（简体中文） version is available in [README_ZH.md](README_ZH.md).
 
 This tool simply monitors and updates domain name records based on obtained IP addresses. [While there are similar existing projects](https://github.com/mingcheng/ddns-go) that are already very useful, there were several points that didn't meet my personal expectations and requirements:
 
@@ -91,19 +90,19 @@ Extensions register a `SourceFunc` or `TargetFunc`; see [func.go](func.go), [sou
 
 ### source
 
-| Name | Address source |
-| --- | --- |
-| `lo` | Local loopback `127.0.0.1`, for testing |
-| `static` | An IPv4 or IPv6 address from `source.content` |
-| `cloudflare` | Cloudflare trace endpoint |
-| `cz88` | CZ88 JSON endpoint |
-| `ipify` | ipify IPv4 endpoint |
-| `ipinfo` | IPinfo plain-text endpoint |
-| `ipip` | IPIP JSON endpoint |
-| `ipplus360` | IPPlus360 JSON endpoint |
-| `ipsb` | IP.SB IPv4 endpoint |
-| `myip` | `api.my-ip.io` plain-text endpoint |
-| `opendns` | OpenDNS IPv4 endpoint |
+| Name         | Address source                                |
+| ------------ | --------------------------------------------- |
+| `lo`         | Local loopback `127.0.0.1`, for testing       |
+| `static`     | An IPv4 or IPv6 address from `source.content` |
+| `cloudflare` | Cloudflare trace endpoint                     |
+| `cz88`       | CZ88 JSON endpoint                            |
+| `ipify`      | ipify IPv4 endpoint                           |
+| `ipinfo`     | IPinfo plain-text endpoint                    |
+| `ipip`       | IPIP JSON endpoint                            |
+| `ipplus360`  | IPPlus360 JSON endpoint                       |
+| `ipsb`       | IP.SB IPv4 endpoint                           |
+| `myip`       | `api.my-ip.io` plain-text endpoint            |
+| `opendns`    | OpenDNS IPv4 endpoint                         |
 
 An endpoint may only support one address family; do not combine sources that return different families in the same job.
 
@@ -126,29 +125,6 @@ _cloudflare_
 Uses Cloudflare. `key` is the zone ID and `token` is an API token with DNS edit permissions for that zone. Existing records are updated in place, preserving their settings. See [example/cloudflare.yml](example/cloudflare.yml).
 
 All three DNS targets support an optional SOCKS5 `proxy` in `host:port` form.
-
-## Development and release
-
-```sh
-mise exec -- make check       # formatting, module consistency, vet, tests, race/coverage, CI/Dockerfile lint
-mise exec -- make vulncheck   # reachable dependency vulnerability checks
-mise exec -- make verify-dist
-mise exec -- make release     # all release gates; does not tag, push or publish
-```
-
-Tests use local HTTP fixtures and fake DNS responses, never provider credentials or real DNS updates. Coverage is written to `coverage.out`. Release verification checks archive contents, SHA-256 hashes, target OS/architecture, Go version, disabled CGO, and native `--version` startup.
-
-The host needs its standard shell/archive utilities (`tar`, `zip`, `shasum`). The optional macOS `darwin_universal` target also needs the platform `lipo` utility. `mise exec -- make clean` only removes generated files; it does not recursively delete the distribution directory.
-
-GitHub CI tests Linux, macOS and Windows, runs race checks, and uploads release candidates. The security workflow runs CodeQL and the mise-pinned govulncheck. Container builds run tests before building the executable.
-
-Before publishing 2.0.0:
-
-1. Review [CHANGELOG.md](CHANGELOG.md), set its release date, and confirm `mise exec -- make version` reports `2.0.0`.
-2. Run `mise exec -- make release` and let all CI jobs pass.
-3. Commit the reviewed changes, then create and push the `v2.0.0` tag.
-
-The release workflow checks out that existing tag, verifies its version against the Makefile, repeats release gates and publishes the archives with checksums. Manual runs also require an existing version tag; they cannot silently publish the selected branch as a different version. Prereleases are marked as such and do not promote the container's stable `latest` tag.
 
 ## FAQ
 
