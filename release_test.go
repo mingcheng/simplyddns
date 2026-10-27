@@ -89,7 +89,7 @@ func TestReleaseArtifacts(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, fmt.Sprintf("%x", sha256.Sum256(data)), hashes[name], "archive checksum mismatch")
 			files := readReleaseArchive(t, data, extension)
-			expected := []string{binaryName, "LICENSE", "README.md", "README_ZH.md", "CHANGELOG.md", "simplyddns.yml"}
+			expected := []string{binaryName, "LICENSE", "README.md", "README_ZH.md", "simplyddns.yml"}
 			require.Len(t, files, len(expected))
 			for _, filename := range expected {
 				require.NotEmpty(t, files[filename], "%s is missing or empty", filename)

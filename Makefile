@@ -74,12 +74,12 @@ dist:
 	@set -eu; stage=$$(mktemp -d "$(DIST_DIR)/.stage.XXXXXX"); archive=""; \
 	cleanup() { \
 		rm -f "$$stage/$(BIN)" "$$stage/$(BIN).exe" "$$stage/LICENSE" \
-			"$$stage/README.md" "$$stage/README_ZH.md" "$$stage/CHANGELOG.md" "$$stage/simplyddns.yml"; \
+			"$$stage/README.md" "$$stage/README_ZH.md" "$$stage/simplyddns.yml"; \
 		if [ -n "$$archive" ]; then rm -f "$$stage/$$archive"; fi; \
 		rmdir "$$stage"; \
 	}; \
 	trap cleanup EXIT; \
-	cp LICENSE README.md README_ZH.md CHANGELOG.md "$$stage/"; \
+	cp LICENSE README.md README_ZH.md "$$stage/"; \
 	cp example/basic.yml "$$stage/simplyddns.yml"; \
 	set --; \
 	for target in $(RELEASE_TARGETS); do \
@@ -89,9 +89,9 @@ dist:
 		if [ "$$os" = windows ]; then bin="$(BIN).exe"; archive="$$name.zip"; fi; \
 		GOOS="$$os" GOARCH="$$arch" CGO_ENABLED=0 $(GO) build $(GO_FLAGS) -o "$$stage/$$bin" $(DIR_SRC); \
 		if [ "$$os" = windows ]; then \
-			(cd "$$stage" && zip -q "$$archive" "$$bin" LICENSE README.md README_ZH.md CHANGELOG.md simplyddns.yml); \
+			(cd "$$stage" && zip -q "$$archive" "$$bin" LICENSE README.md README_ZH.md simplyddns.yml); \
 		else \
-			(cd "$$stage" && COPYFILE_DISABLE=1 tar -czf "$$archive" "$$bin" LICENSE README.md README_ZH.md CHANGELOG.md simplyddns.yml); \
+			(cd "$$stage" && COPYFILE_DISABLE=1 tar -czf "$$archive" "$$bin" LICENSE README.md README_ZH.md simplyddns.yml); \
 		fi; \
 		mv "$$stage/$$archive" "$(DIST_DIR)/$$archive"; \
 		rm -f "$$stage/$$bin"; \
