@@ -77,12 +77,17 @@ Each entry under `ddns` is a job: `source` chooses how to get an address, and `t
 
 ### DNS providers
 
-| Provider | `target.type` | `key` | `token` | Example |
-| --- | --- | --- | --- | --- |
-| Cloudflare | `cloudflare` | Zone ID | API token with DNS edit permissions | [cloudflare.yml](example/cloudflare.yml) |
-| Aliyun DNS | `alidns` | AccessKey ID | AccessKey Secret | [alidns.yml](example/alidns.yml) |
-| Name.com | `namedotcom` | Username | API token | [namedotcom.yml](example/namedotcom.yml) |
-| Demo, no DNS updates | `sleep` | Not needed | Not needed | - |
+| Provider               | `target.type` | `key`           | `token`                             | Example                                    |
+| ---------------------- | ------------- | --------------- | ----------------------------------- | ------------------------------------------ |
+| Cloudflare             | `cloudflare`  | Zone ID         | API token with DNS edit permissions | [cloudflare.yml](example/cloudflare.yml)   |
+| Aliyun DNS             | `alidns`      | AccessKey ID    | AccessKey Secret                    | [alidns.yml](example/alidns.yml)           |
+| Name.com               | `namedotcom`  | Username        | API token                           | [namedotcom.yml](example/namedotcom.yml)   |
+| Tencent Cloud DNSPod   | `dnspod`      | SecretId        | SecretKey                           | [dnspod.yml](example/dnspod.yml)           |
+| AWS Route 53           | `route53`     | Access key ID   | Secret access key                   | [route53.yml](example/route53.yml)         |
+| Huawei Cloud DNS       | `huaweicloud` | Access key (AK) | Secret key (SK)                     | [huaweicloud.yml](example/huaweicloud.yml) |
+| GoDaddy                | `godaddy`     | API key         | API secret                          | [godaddy.yml](example/godaddy.yml)         |
+| PowerDNS Authoritative | `powerdns`    | Not needed      | API key                             | [powerdns.yml](example/powerdns.yml)       |
+| Demo, no DNS updates   | `sleep`       | Not needed      | Not needed                          | -                                          |
 
 To access a DNS provider through SOCKS5, set `target.proxy`, for example `127.0.0.1:1080`. This setting applies to DNS updates, not address discovery.
 
@@ -90,13 +95,13 @@ To access a DNS provider through SOCKS5, set `target.proxy`, for example `127.0.
 
 **Automatic mode is the default**: omit `source.type` or set it to `auto` to discover IPv4 addresses using multiple services.
 
-| Use case | `source.type` |
-| --- | --- |
-| Automatic IPv4 | `auto` or `auto-ipv4` |
-| Automatic IPv6 | `auto-ipv6`; see [ipv6.yml](example/ipv6.yml) |
+| Use case                | `source.type`                                                                          |
+| ----------------------- | -------------------------------------------------------------------------------------- |
+| Automatic IPv4          | `auto` or `auto-ipv4`                                                                  |
+| Automatic IPv6          | `auto-ipv6`; see [ipv6.yml](example/ipv6.yml)                                          |
 | Choose servers yourself | For example, `ipify` or `ipify,ipsb`; see [multi-source.yml](example/multi-source.yml) |
-| Use a fixed address | `static`, with the address in `source.content`; see [static.yml](example/static.yml) |
-| Offline demo | `lo` |
+| Use a fixed address     | `static`, with the address in `source.content`; see [static.yml](example/static.yml)   |
+| Offline demo            | `lo`                                                                                   |
 
 When you specify servers, **only those servers are queried, even on failure**. Successful responses from a list must agree. Do not mix automatic modes with named servers, or IPv4 and IPv6 sources in one job.
 
@@ -107,10 +112,10 @@ SIMPLYDDNS_AUTO_SOURCE_COUNT=5 ./simplyddns --config simplyddns.yml
 ```
 
 | Concurrent sources | Matching responses required |
-| --- | --- |
-| 3 | 2 |
-| 5 | 3 |
-| 7 | 4 |
+| ------------------ | --------------------------- |
+| 3                  | 2                           |
+| 5                  | 3                           |
+| 7                  | 4                           |
 
 Only these values are supported. Unset means 3; an empty or invalid value is an error. The setting affects automatic mode only. If too few results agree, DNS is left unchanged and checked again later.
 
@@ -134,11 +139,11 @@ Choose entries from the IPv4 or IPv6 list when you need a specific address famil
 
 ### Common settings
 
-| Setting | Usage |
-| --- | --- |
+| Setting           | Usage                                                                                                          |
+| ----------------- | -------------------------------------------------------------------------------------------------------------- |
 | `source.interval` | Check interval in seconds. Default: 60; values below 30 use 30. For regular use, 300 or longer is recommended. |
-| `logfile` | Defaults to stderr. Use `/dev/stdout` or a writable file path if preferred. |
-| `debug` | Set to `true` for more detailed troubleshooting logs. |
+| `logfile`         | Defaults to stderr. Use `/dev/stdout` or a writable file path if preferred.                                    |
+| `debug`           | Set to `true` for more detailed troubleshooting logs.                                                          |
 
 Use `--config` to select a file. Without it, SimplyDDNS searches `/etc/simplyddns`, `$HOME/.config/simplyddns`, then the current directory for `simplyddns.yml` or `simplyddns.yaml`.
 
@@ -164,6 +169,21 @@ mise exec docker-cli -- docker compose up --build -d
 
 The default mount is the offline demo and does not update DNS. Compose also supports `SIMPLYDDNS_AUTO_SOURCE_COUNT`.
 
+## Source and target development
+
+Each online source has its own implementation and matching test file in [source/](source/), including separate IPv4/IPv6 variants. File names replace `-` with `_`: for example, `ipify-ipv6` lives in [ipify_ipv6.go](source/ipify_ipv6.go) and [ipify_ipv6_test.go](source/ipify_ipv6_test.go). Keep the endpoint, headers, parsing options and response fixtures in that source's files; only common HTTP/validation helpers and test assertions are shared.
+
+Each target type follows the same rule in [target/](target/), for example [dnspod.go](target/dnspod.go) and [dnspod_test.go](target/dnspod_test.go). Target tests use mocked HTTP APIs and never modify real DNS.
+
+Run individual source or target tests without contacting the API:
+
+```sh
+mise exec go -- go test ./source -run '^TestSourceIPifyIPv6$' -count=1
+mise exec go -- go test ./target -run '^TestDNSPod' -count=1
+```
+
+For an opt-in connectivity/response-format check, set `SIMPLYDDNS_LIVE_SOURCES=ipify-ipv6` and run `TestOnlineHTTPSources` instead. Live checks do not compare the response with the machine's real public IP.
+
 ## License
 
-[MIT](LICENSE)
+This project is licensed under the [MIT](LICENSE) license.

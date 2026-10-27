@@ -77,12 +77,17 @@ Cloudflare 的 API token 需要拥有对应区域的 DNS 编辑权限。其他�
 
 ### 域名服务商
 
-| 服务商               | `target.type` | `key`        | `token`                       | 示例                                     |
-| -------------------- | ------------- | ------------ | ----------------------------- | ---------------------------------------- |
-| Cloudflare           | `cloudflare`  | Zone ID      | 具有 DNS 编辑权限的 API token | [cloudflare.yml](example/cloudflare.yml) |
-| 阿里云 DNS           | `alidns`      | AccessKey ID | AccessKey Secret              | [alidns.yml](example/alidns.yml)         |
-| Name.com             | `namedotcom`  | 用户名       | API token                     | [namedotcom.yml](example/namedotcom.yml) |
-| 体验模式，不更新 DNS | `sleep`       | 无需填写     | 无需填写                      | -                                        |
+| 服务商                 | `target.type` | `key`            | `token`                       | 示例                                       |
+| ---------------------- | ------------- | ---------------- | ----------------------------- | ------------------------------------------ |
+| Cloudflare             | `cloudflare`  | Zone ID          | 具有 DNS 编辑权限的 API token | [cloudflare.yml](example/cloudflare.yml)   |
+| 阿里云 DNS             | `alidns`      | AccessKey ID     | AccessKey Secret              | [alidns.yml](example/alidns.yml)           |
+| Name.com               | `namedotcom`  | 用户名           | API token                     | [namedotcom.yml](example/namedotcom.yml)   |
+| 腾讯云 DNSPod          | `dnspod`      | SecretId         | SecretKey                     | [dnspod.yml](example/dnspod.yml)           |
+| AWS Route 53           | `route53`     | Access key ID    | Secret access key             | [route53.yml](example/route53.yml)         |
+| 华为云 DNS             | `huaweicloud` | Access key（AK） | Secret key（SK）              | [huaweicloud.yml](example/huaweicloud.yml) |
+| GoDaddy                | `godaddy`     | API key          | API secret                    | [godaddy.yml](example/godaddy.yml)         |
+| PowerDNS Authoritative | `powerdns`    | 无需填写         | API key                       | [powerdns.yml](example/powerdns.yml)       |
+| 体验模式，不更新 DNS   | `sleep`       | 无需填写         | 无需填写                      | -                                          |
 
 访问 DNS 服务商需要 SOCKS5 代理时，可设置 `target.proxy`，例如 `127.0.0.1:1080`。该设置仅用于 DNS 更新，不控制地址来源请求。
 
@@ -164,6 +169,21 @@ mise exec docker-cli -- docker compose up --build -d
 
 默认挂载的是离线示例，不会更新 DNS。Compose 同样支持 `SIMPLYDDNS_AUTO_SOURCE_COUNT` 环境变量。
 
+## 来源与目标开发
+
+[source/](source/) 中每个线上来源独立一个实现文件，并配有同名测试文件，IPv4/IPv6 变体也分别存放。文件名将 `-` 替换为 `_`，例如 `ipify-ipv6` 对应 [ipify_ipv6.go](source/ipify_ipv6.go) 和 [ipify_ipv6_test.go](source/ipify_ipv6_test.go)。接口地址、请求头、解析参数和响应样本在各自文件中维护，仅复用通用 HTTP/校验函数和测试断言。
+
+[target/](target/) 中也按一种类型一份实现和测试组织，例如 [dnspod.go](target/dnspod.go) 与 [dnspod_test.go](target/dnspod_test.go)。target 测试使用模拟 HTTP API，不会修改真实 DNS。
+
+单独运行来源或目标类型的离线测试，不会访问线上 API：
+
+```sh
+mise exec go -- go test ./source -run '^TestSourceIPifyIPv6$' -count=1
+mise exec go -- go test ./target -run '^TestDNSPod' -count=1
+```
+
+需要显式验证连通性及响应格式时，可设置 `SIMPLYDDNS_LIVE_SOURCES=ipify-ipv6`，改为运行 `TestOnlineHTTPSources`；线上检查不会与本机真实公网 IP 比较。
+
 ## 许可证
 
-[MIT](LICENSE)
+本项目采用 [MIT](LICENSE) 许可证。

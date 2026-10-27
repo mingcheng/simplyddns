@@ -1,0 +1,13 @@
+logfile: "/dev/stderr"
+
+ddns:
+  - source:
+      type: auto
+      interval: 300
+    target:
+      type: powerdns
+      token: "<powerdns-api-key>"
+      endpoint: "https://dns.example.net/api/v1/servers/localhost"
+      zone: "example.com."
+      domains:
+        - "home.example.com"

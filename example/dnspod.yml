@@ -1,0 +1,13 @@
+logfile: "/dev/stderr"
+
+ddns:
+  - source:
+      type: auto
+      interval: 300
+    target:
+      type: dnspod
+      key: "<tencentcloud-secret-id>"
+      token: "<tencentcloud-secret-key>"
+      zone: "example.com"
+      domains:
+        - "home.example.com"

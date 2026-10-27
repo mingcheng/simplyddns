@@ -1,0 +1,13 @@
+logfile: "/dev/stderr"
+
+ddns:
+  - source:
+      type: auto
+      interval: 300
+    target:
+      type: godaddy
+      key: "<godaddy-api-key>"
+      token: "<godaddy-api-secret>"
+      zone: "example.com"
+      domains:
+        - "home.example.com"

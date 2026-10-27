@@ -1,0 +1,15 @@
+logfile: "/dev/stderr"
+
+ddns:
+  - source:
+      type: auto
+      interval: 300
+    target:
+      type: route53
+      key: "<aws-access-key-id>"
+      token: "<aws-secret-access-key>"
+      zone: "<hosted-zone-id>"
+      region: "us-east-1"
+      # Temporary credentials also require session_token.
+      domains:
+        - "home.example.com"

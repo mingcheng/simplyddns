@@ -95,6 +95,36 @@ func TestReadConfigureAutomaticSources(t *testing.T) {
 	}
 }
 
+func TestReadConfigureTargetOptions(t *testing.T) {
+	filename := filepath.Join(t.TempDir(), "config.yml")
+	require.NoError(t, os.WriteFile(filename, []byte(`
+ddns:
+  - source: {type: lo}
+    target:
+      type: huaweicloud
+      key: test-key
+      token: test-secret
+      zone: test-zone
+      region: cn-north-4
+      project_id: test-project
+      session_token: test-session
+      endpoint: https://dns.example.net/api/v1/servers/localhost
+      domains: [home.example.com]
+`), 0600))
+	var config simplyddns.Config
+	require.NoError(t, readConfigure(&config, filename))
+	require.Len(t, config.Jobs, 1)
+	assert.Equal(t, simplyddns.TargetConfig{
+		Type: "huaweicloud", Key: "test-key", Token: "test-secret", Zone: "test-zone",
+		Region: "cn-north-4", ProjectID: "test-project", SessionToken: "test-session",
+		Endpoint: "https://dns.example.net/api/v1/servers/localhost", Domains: []string{"home.example.com"},
+	}, config.Jobs[0].Target)
+
+	require.NoError(t, os.WriteFile(filename, []byte("ddns:\n  - source: {type: lo}\n    target: {type: sleep}\n"), 0600))
+	require.NoError(t, readConfigure(&config, filename))
+	assert.Equal(t, simplyddns.TargetConfig{Type: "sleep"}, config.Jobs[0].Target)
+}
+
 func TestReadConfigureRejectsInvalidAutomaticCount(t *testing.T) {
 	for _, source := range []string{"{}", "{type: auto}", "{type: auto-ipv4}", "{type: auto-ipv6}"} {
 		for _, count := range []string{"", "4", "9", "invalid"} {

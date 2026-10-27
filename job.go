@@ -39,11 +39,16 @@ type SourceConfig struct {
 
 // TargetConfig describes how a target function updates DNS records.
 type TargetConfig struct {
-	Type    string   `yaml:"type,omitempty"`
-	Key     string   `yaml:"key,omitempty"`
-	Token   string   `yaml:"token"`
-	Proxy   string   `yaml:"proxy"`
-	Domains []string `yaml:"domains,omitempty"`
+	Type         string   `yaml:"type,omitempty"`
+	Key          string   `yaml:"key,omitempty"`
+	Token        string   `yaml:"token"`
+	Proxy        string   `yaml:"proxy"`
+	Domains      []string `yaml:"domains,omitempty"`
+	Zone         string   `yaml:"zone,omitempty" mapstructure:"zone"`
+	Region       string   `yaml:"region,omitempty" mapstructure:"region"`
+	ProjectID    string   `yaml:"project_id,omitempty" mapstructure:"project_id"`
+	SessionToken string   `yaml:"session_token,omitempty" mapstructure:"session_token"`
+	Endpoint     string   `yaml:"endpoint,omitempty" mapstructure:"endpoint"`
 }
 
 // WebHook describes the webhook triggered when the address changes.

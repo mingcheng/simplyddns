@@ -1,0 +1,15 @@
+logfile: "/dev/stderr"
+
+ddns:
+  - source:
+      type: auto
+      interval: 300
+    target:
+      type: huaweicloud
+      key: "<access-key>"
+      token: "<secret-key>"
+      zone: "<public-zone-id>"
+      region: "cn-north-4"
+      project_id: "<regional-project-id>"
+      domains:
+        - "home.example.com"
