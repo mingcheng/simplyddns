@@ -17,7 +17,7 @@ debug: true
 
 ddns:
   - source:
-      type: cloudflare
+      type: auto
       interval: 3600
     target:
       type: cloudflare

@@ -30,10 +30,11 @@ import (
 
 // SourceConfig describes how a source function obtains the public IP address.
 type SourceConfig struct {
-	Interval uint   `yaml:"interval,omitempty"`
-	Type     string `yaml:"type,omitempty"`
-	Path     string `yaml:"path"`
-	Content  string `yaml:"content"`
+	Interval uint `yaml:"interval,omitempty"`
+	// Type defaults to auto; explicit names never include automatic sources.
+	Type    string `yaml:"type,omitempty"`
+	Path    string `yaml:"path"`
+	Content string `yaml:"content"`
 }
 
 // TargetConfig describes how a target function updates DNS records.
@@ -187,9 +188,8 @@ func (j *Job) Stop() {
 	j.cancel()
 }
 
-// Source executes every registered source function for this job and returns
-// the resolved address. When multiple source functions are configured, they
-// must all agree on the same address; otherwise an error is returned.
+// Source executes only the configured sources. Automatic sources elect an
+// address by majority; explicitly listed sources must agree on the address.
 func (j *Job) Source(ctx context.Context, config *SourceConfig) (*net.IP, error) {
 	if len(j.SourceFunc) == 0 {
 		return nil, fmt.Errorf("source functions is empty")
@@ -216,6 +216,9 @@ func (j *Job) Source(ctx context.Context, config *SourceConfig) (*net.IP, error)
 		}
 		if err != nil {
 			log.Errorf("source function error (%d): %v", errTimes, err)
+			if len(j.SourceFunc) == 1 {
+				return nil, err
+			}
 			errTimes++
 			continue
 		}
@@ -243,6 +246,9 @@ func (j *Job) Source(ctx context.Context, config *SourceConfig) (*net.IP, error)
 
 // NewJob creates a new Job from the given JobConfig.
 func NewJob(config JobConfig) (*Job, error) {
+	if strings.TrimSpace(config.Source.Type) == "" {
+		config.Source.Type = DefaultSourceType
+	}
 	if err := ValidateConfig(&config); err != nil {
 		return nil, err
 	}

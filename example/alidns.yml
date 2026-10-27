@@ -13,7 +13,7 @@ debug: true
 
 ddns:
   - source:
-      type: "ipip"
+      type: auto
       interval: 3600
     target:
       type: alidns

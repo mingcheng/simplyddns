@@ -17,6 +17,10 @@ package simplyddns
 import "time"
 
 const (
+	DefaultSourceType      = "auto"
+	DefaultAutoSourceCount = 3
+	AutoSourceCountEnv     = "SIMPLYDDNS_AUTO_SOURCE_COUNT"
+
 	// DefaultInterval is the default check interval in seconds
 	DefaultInterval = 60
 

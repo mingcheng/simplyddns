@@ -63,13 +63,23 @@ func rawIPByURL(ctx context.Context, url string, headers map[string]string) (*ne
 	return parseIP(data)
 }
 
-func jsonIPByURL(ctx context.Context, url, path string, headers map[string]string) (*net.IP, error) {
+type jsonStatus struct {
+	path, value string
+}
+
+func jsonIPByURL(ctx context.Context, url, path string, headers map[string]string, statuses ...jsonStatus) (*net.IP, error) {
 	data, err := RawStrByURL(ctx, url, headers)
 	if err != nil {
 		return nil, err
 	}
 	if !gjson.Valid(data) {
 		return nil, fmt.Errorf("source returned invalid JSON")
+	}
+	for _, status := range statuses {
+		result := gjson.Get(data, status.path)
+		if !result.Exists() || result.String() != status.value {
+			return nil, fmt.Errorf("source returned %s=%q, expected %q", status.path, result.String(), status.value)
+		}
 	}
 	return parseIP(gjson.Get(data, path).Str)
 }

@@ -1,193 +1,169 @@
-# Simply DDNS - Yet Another Universal DDNS Tools
+# SimplyDDNS
 
-- [Concepts](#concepts)
-- [Installation](#installation)
-  - [Build with mise](#build-with-mise)
-  - [docker-compose](#docker-compose)
-- [Configuration](#configuration)
-- [Extensions](#extensions)
-  - [source](#source)
-  - [target](#target)
-- [FAQ](#faq)
-  - [WebHook Configuration](#webhook-configuration)
+[简体中文](README_ZH.md)
 
-SimplyDDNS is a universal DDNS tool that can be used to update domain name records based on obtained IP addresses. It is designed to be flexible and easy to extend. A Chinese（简体中文） version is available in [README_ZH.md](README_ZH.md).
+Keep your domain pointed at your current public IP, so your home server, NAS or other services remain easy to reach when the address changes.
 
-This tool simply monitors and updates domain name records based on obtained IP addresses. [While there are similar existing projects](https://github.com/mingcheng/ddns-go) that are already very useful, there were several points that didn't meet my personal expectations and requirements:
+- **Simple to run**: manage everything in a YAML file, without a web interface.
+- **Flexible address discovery**: use automatic checks across multiple services, or restrict requests to servers you choose.
+- **Multiple domains and providers**: support IPv4 and IPv6 with Cloudflare, Aliyun DNS and Name.com.
+- **Updates only when needed**: avoid unnecessary DNS changes, with logs and optional webhook notifications.
 
-1. I don't need a UI interface; instead, I prefer a fully functional configuration file
-2. Need more flexibility and freedom in configuration combinations
-3. As a server-side application, more detailed logging and ability to transmit required information
+## Quick start
 
-Since this is actually a strong requirement (everyone knows that when setting up a website, the last step is changing DNS, which is very troublesome and error-prone),
-this application was created. While it may have a relatively higher configuration threshold, it offers more flexibility.
+### 1. Install
 
-## Concepts
-
-[Dynamic DNS registration (DDNS)](https://en.wikipedia.org/wiki/Dynamic_DNS) behavior is abstracted into two types: how to obtain IP addresses and how to configure DNS.
-
-Therefore, by implementing these two interfaces and matching them with configurations, you can flexibly arrange and run them. See the Extensions section for details.
-
-## Installation
-
-The release workflow produces archives for Linux amd64/arm64, macOS amd64/arm64 and Windows amd64, together with `checksums.txt`. Each archive contains the executable, license, documentation and a safe `simplyddns.yml` example. Verify downloaded archives with `shasum -a 256 -c checksums.txt` before extracting them.
-
-### Build with mise
-
-Project tool versions are pinned in [mise.toml](mise.toml). Use [mise](https://mise.jdx.dev/) to install or update tools; Go must not download an unmanaged replacement toolchain (`GOTOOLCHAIN=local`).
+Install with [Homebrew](https://brew.sh/):
 
 ```sh
+brew install mingcheng/tap/simplyddns
+```
+
+With Homebrew, use `simplyddns` instead of `./simplyddns` in the commands below.
+
+Alternatively, download the archive for Linux, macOS or Windows from [Releases](https://github.com/mingcheng/simplyddns/releases) and extract it. The commands below use Linux/macOS syntax; on Windows, run `simplyddns.exe`.
+
+<details>
+<summary>Build from source with mise</summary>
+
+Install [mise](https://mise.jdx.dev/), then run:
+
+```sh
+git clone https://github.com/mingcheng/simplyddns.git
+cd simplyddns
 mise trust
-mise install
-mise exec -- make build
-./simplyddns --version
-./simplyddns --config example/basic.yml
+mise install go make
+mise exec go make -- make build
 ```
 
-The last command runs an offline loopback/sleep demonstration. To install the executable into Go's binary directory, use `mise exec -- make install`.
+</details>
 
-### docker-compose
+### 2. Configure
 
-With a running Docker engine and the Compose plugin:
-
-```sh
-mise exec -- make build_docker_image
-mise exec docker-cli -- docker run --rm simplyddns:2.0.0 --version
-mise exec docker-cli -- docker compose up --build -d
-```
-
-[compose.yml](compose.yml) mounts the safe example configuration read-only. Replace that mount with your own configuration for real DNS updates. The container runs as an unprivileged user; log to stderr or provide a writable log destination. Go is installed through mise inside the [Dockerfile](Dockerfile), using the same project version as local builds.
-
-## Configuration
-
-See [example/](example/) for complete configurations. Select a file with `--config`; otherwise SimplyDDNS searches `/etc/simplyddns`, `$HOME/.config/simplyddns`, then the working directory for `simplyddns.yml` or `simplyddns.yaml`.
-
-A minimal configuration, from [basic.yml](example/basic.yml):
+Create `simplyddns.yml`, or replace the demo configuration included in the release archive. This example updates two domains through Cloudflare; replace the credentials and domains with your own:
 
 ```yaml
 logfile: "/dev/stderr"
-debug: true
 
 ddns:
   - source:
-      type: "lo"
-      interval: 60 # 1 minute
+      type: auto
+      interval: 300
     target:
-      type: "sleep"
-```
-
-This configuration file means getting the IP address from the lo module and passing it to the sleep target for execution. The sleep target does nothing except sleep for a few seconds, but this demonstrates SimplyDDNS's working mechanism.
-
-Intervals are in seconds: the default is 60 and values below 30 are clamped to 30. The first check waits for the interval. Each cycle has a 30-second deadline, and built-in operations honor shutdown cancellation. Invalid job definitions and domain names are rejected instead of being retried indefinitely.
-
-Comma-separated source names are supported, for example `ipify,ipsb`. Successful sources must agree; larger groups also reject excessive failures. Configure IPv4 and IPv6 in separate jobs: targets select A or AAAA records from the supplied address. Successful updates are cached until the source address changes; failed updates are retried on a later tick.
-
-Logs go to stderr by default. `/dev/stdout` and `/dev/stderr` use the existing standard streams, including in read-only containers. Other log files are closed when the service stops.
-
-## Extensions
-
-Extensions register a `SourceFunc` or `TargetFunc`; see [func.go](func.go), [source/lo.go](source/lo.go) and [target/sleep.go](target/sleep.go). Implementations must honor the supplied context and return errors for invalid input or failed operations.
-
-### source
-
-| Name         | Address source                                |
-| ------------ | --------------------------------------------- |
-| `lo`         | Local loopback `127.0.0.1`, for testing       |
-| `static`     | An IPv4 or IPv6 address from `source.content` |
-| `cloudflare` | Cloudflare trace endpoint                     |
-| `cz88`       | CZ88 JSON endpoint                            |
-| `ipify`      | ipify IPv4 endpoint                           |
-| `ipinfo`     | IPinfo plain-text endpoint                    |
-| `ipip`       | IPIP JSON endpoint                            |
-| `ipplus360`  | IPPlus360 JSON endpoint                       |
-| `ipsb`       | IP.SB IPv4 endpoint                           |
-| `myip`       | `api.my-ip.io` plain-text endpoint            |
-| `opendns`    | OpenDNS IPv4 endpoint                         |
-
-An endpoint may only support one address family; do not combine sources that return different families in the same job.
-
-### target
-
-_sleep_
-
-Does nothing but sleep for a few seconds, can be used for testing
-
-_alidns_
-
-Uses Aliyun DNS. `key` is the access key ID and `token` is the access key secret. See [example/alidns.yml](example/alidns.yml).
-
-_namedotcom_
-
-Uses Name.com. `key` is the username and `token` is the API token. See [example/namedotcom.yml](example/namedotcom.yml).
-
-_cloudflare_
-
-Uses Cloudflare. `key` is the zone ID and `token` is an API token with DNS edit permissions for that zone. Existing records are updated in place, preserving their settings. See [example/cloudflare.yml](example/cloudflare.yml).
-
-All three DNS targets support an optional SOCKS5 `proxy` in `host:port` form.
-
-## FAQ
-
-_If I only have one way to request IP addresses but multiple domains, repeating configurations makes it look bloated. Is there a better solution?_
-
-This is a common scenario. You can consider using Yaml's reference feature to reduce repeated configurations, for example:
-
-```yaml
-defaults: &defaults
-  type: lo
-  interval: 60
-```
-
-First define returning a local address from lo every minute, then configure the corresponding domain updates:
-
-```yaml
-ddns:
-  - source:
-      <<: *defaults
-    target:
-      type: "sleep"
+      type: cloudflare
+      key: "<your-zone-id>"
+      token: "<your-api-token>"
       domains:
-        - a.com
-        - b.com
-  - source:
-      <<: *defaults
-    target:
-      type: "another"
-      domains:
-        - c.com
-        - d.com
+        - home.example.com
+        - nas.example.com
 ```
 
-After configuring this way, you only need to focus on the target (domain) configuration.
+The Cloudflare token needs DNS edit permissions for the specified zone. For other providers, see [DNS providers](#dns-providers).
 
-### WebHook Configuration
+### 3. Run
 
-A webhook runs after a successful address update. Configure it inside the corresponding job:
+```sh
+./simplyddns --version
+./simplyddns --config simplyddns.yml
+```
+
+Keep the process running to check and update your records. The first check starts after one configured interval.
+
+To try SimplyDDNS without modifying DNS, use the [offline demo](example/basic.yml) or [automatic address discovery demo](example/auto.yml). The release archive includes the offline demo as its default configuration.
+
+## Configuration
+
+Each entry under `ddns` is a job: `source` chooses how to get an address, and `target` chooses where to update DNS. Add domains to the same job when they share a provider and credentials; use separate jobs for different accounts, providers, or IPv4/IPv6. Complete examples are in [example/](example/).
+
+### DNS providers
+
+| Provider | `target.type` | `key` | `token` | Example |
+| --- | --- | --- | --- | --- |
+| Cloudflare | `cloudflare` | Zone ID | API token with DNS edit permissions | [cloudflare.yml](example/cloudflare.yml) |
+| Aliyun DNS | `alidns` | AccessKey ID | AccessKey Secret | [alidns.yml](example/alidns.yml) |
+| Name.com | `namedotcom` | Username | API token | [namedotcom.yml](example/namedotcom.yml) |
+| Demo, no DNS updates | `sleep` | Not needed | Not needed | - |
+
+To access a DNS provider through SOCKS5, set `target.proxy`, for example `127.0.0.1:1080`. This setting applies to DNS updates, not address discovery.
+
+### Address sources
+
+**Automatic mode is the default**: omit `source.type` or set it to `auto` to discover IPv4 addresses using multiple services.
+
+| Use case | `source.type` |
+| --- | --- |
+| Automatic IPv4 | `auto` or `auto-ipv4` |
+| Automatic IPv6 | `auto-ipv6`; see [ipv6.yml](example/ipv6.yml) |
+| Choose servers yourself | For example, `ipify` or `ipify,ipsb`; see [multi-source.yml](example/multi-source.yml) |
+| Use a fixed address | `static`, with the address in `source.content`; see [static.yml](example/static.yml) |
+| Offline demo | `lo` |
+
+When you specify servers, **only those servers are queried, even on failure**. Successful responses from a list must agree. Do not mix automatic modes with named servers, or IPv4 and IPv6 sources in one job.
+
+Automatic mode uses 3 concurrent sources by default. Set `SIMPLYDDNS_AUTO_SOURCE_COUNT` to adjust it:
+
+```sh
+SIMPLYDDNS_AUTO_SOURCE_COUNT=5 ./simplyddns --config simplyddns.yml
+```
+
+| Concurrent sources | Matching responses required |
+| --- | --- |
+| 3 | 2 |
+| 5 | 3 |
+| 7 | 4 |
+
+Only these values are supported. Unset means 3; an empty or invalid value is an error. The setting affects automatic mode only. If too few results agree, DNS is left unchanged and checked again later.
+
+<details>
+<summary>All available server names</summary>
+
+These services need no API key:
+
+- **IPv4**: `ipify`, `ipsb`, `opendns`, `icanhazip-ipv4`, `ident-ipv4`, `myexternalip-ipv4`, `tnedi-ipv4`, `wtfismyip-ipv4`.
+- **IPv6**: `icanhazip-ipv6`, `ident-ipv6`, `ipify-ipv6`, `ipinfo-ipv6`, `ipsb-ipv6`, `opendns-ipv6`, `tnedi-ipv6`, `wtfismyip-ipv6`.
+- **Address family depends on the connection**:
+  `cloudflare`, `countryis`, `curlmyip`, `cz88`, `eth0`, `freeipapi`, `httpbin`, `httpbingo`, `icanhazip`, `ident`,
+  `ifconfigco`, `ifconfigio`, `ifconfigme`, `ipaddress`, `ipconfigio`, `ipecho`, `ipguide`, `ipify-dual`, `ipinfo`, `ipip`,
+  `iplocation`, `ipplus360`, `ipquery`, `ipsb-dual`, `ipwhois`, `myexternalip`, `myip`, `tencent`, `tnedi`, `tyk`, `ustc`, `wtfismyip`, `zxinc`.
+
+Choose entries from the IPv4 or IPv6 list when you need a specific address family.
+
+</details>
+
+> Proxies may cause sources to report a proxy exit IP, even when multiple results agree. Check your direct-routing or proxy bypass rules before using the result for DDNS. IPv6 discovery needs working IPv6 connectivity, either directly or through the proxy.
+
+### Common settings
+
+| Setting | Usage |
+| --- | --- |
+| `source.interval` | Check interval in seconds. Default: 60; values below 30 use 30. For regular use, 300 or longer is recommended. |
+| `logfile` | Defaults to stderr. Use `/dev/stdout` or a writable file path if preferred. |
+| `debug` | Set to `true` for more detailed troubleshooting logs. |
+
+Use `--config` to select a file. Without it, SimplyDDNS searches `/etc/simplyddns`, `$HOME/.config/simplyddns`, then the current directory for `simplyddns.yml` or `simplyddns.yaml`.
+
+### Notifications
+
+To receive a notification after a successful DNS update, add `webhook` to the job at the same level as `source` and `target`:
 
 ```yaml
-ddns:
-  - source:
-      type: lo
-      interval: 60
-    target:
-      type: sleep
-    webhook:
-      url: https://example.com/webhook
-      token: "<optional-bearer-token>"
+webhook:
+  url: "https://example.com/ddns-hook"
+  token: "<optional-bearer-token>"
 ```
 
-After configuring like this, when the address changes, the results and changed domain results will be POSTed to the corresponding address. The result format is as follows:
+Notifications include the new address, domains and update time. You can also configure `username` and `password` for authentication. Use an HTTPS endpoint.
 
-```json
-{
-    "address": "127.0.0.1",
-    "domains": "a.com,b.com",
-    "now": "2022-07-13T15:00:10.931809+08:00"
-}
+## Docker
+
+With Docker Engine and Compose available, change the configuration mount in [compose.yml](compose.yml) to your own file, then run from the repository:
+
+```sh
+mise exec docker-cli -- docker compose up --build -d
 ```
 
-If there are multiple domain results, they will be separated by commas.
+The default mount is the offline demo and does not update DNS. Compose also supports `SIMPLYDDNS_AUTO_SOURCE_COUNT`.
 
-The same address and domain list are sent in the `Address` and `Domains` headers. Basic authentication is also available through `username` and `password`. Use HTTPS for credentials. Any 2xx response is successful; failures are logged without rolling back or repeating the DNS update.
+## License
 
-`- eof -`
+[MIT](LICENSE)

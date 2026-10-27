@@ -1,0 +1,11 @@
+logfile: "/dev/stderr"
+debug: true
+
+ddns:
+  # Requires working IPv6 connectivity; do not mix IPv4 sources into this job.
+  - source:
+      type: auto-ipv6
+      # To restrict requests instead: icanhazip-ipv6,ident-ipv6,opendns-ipv6
+      interval: 300 # seconds
+    target:
+      type: "sleep"

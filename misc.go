@@ -160,8 +160,11 @@ func ValidateConfig(config *JobConfig) error {
 	if config == nil {
 		return fmt.Errorf("configure is nil")
 	}
-	if strings.TrimSpace(config.Source.Type) == "" || strings.TrimSpace(config.Target.Type) == "" {
-		return fmt.Errorf("source or target type cannot be empty")
+	if strings.TrimSpace(config.Target.Type) == "" {
+		return fmt.Errorf("target type cannot be empty")
+	}
+	if err := validateSourceType(config.Source.Type); err != nil {
+		return err
 	}
 	if uint64(config.Source.Interval) > uint64((1<<63-1)/time.Second) {
 		return fmt.Errorf("source interval is too large")

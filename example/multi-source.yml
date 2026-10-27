@@ -13,6 +13,8 @@ debug: true
 
 ddns:
   - source:
+      # Only these servers are queried; failures never trigger auto selection.
+      # Successful responses must agree.
       type: ipify,ipsb,opendns
       interval: 30 # sec
     target:

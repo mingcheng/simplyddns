@@ -8,5 +8,6 @@ services:
     network_mode: host
     environment:
       TZ: "Asia/Shanghai"
+      SIMPLYDDNS_AUTO_SOURCE_COUNT: "${SIMPLYDDNS_AUTO_SOURCE_COUNT-3}"
     volumes:
       - ./example/basic.yml:/simplyddns.yml:ro

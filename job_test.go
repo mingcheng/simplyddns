@@ -57,13 +57,58 @@ func TestNewJob(t *testing.T) {
 	}
 }
 
+func TestNewJobDefaultSource(t *testing.T) {
+	t.Setenv(AutoSourceCountEnv, "3")
+	for _, sourceType := range []string{"", " \t", "auto", " AUTO ", "auto-ipv4", "auto-ipv6"} {
+		t.Run(sourceType, func(t *testing.T) {
+			config := testJobConfig(t)
+			config.Source.Type = sourceType
+			job, err := NewJob(config)
+			require.NoError(t, err)
+			t.Cleanup(job.Stop)
+			require.Len(t, job.SourceFunc, 1)
+			if strings.TrimSpace(sourceType) == "" {
+				assert.Equal(t, "auto", job.Config.Source.Type)
+			} else {
+				assert.Equal(t, sourceType, job.Config.Source.Type)
+			}
+			assert.Equal(t, sourceType, config.Source.Type, "defaults must not mutate the caller's configuration")
+		})
+	}
+}
+
+func TestNewJobAutomaticSourceCountValidation(t *testing.T) {
+	t.Setenv(AutoSourceCountEnv, "4")
+	for _, sourceType := range []string{"", "auto", " AUTO-IPV4 ", "auto-ipv6"} {
+		t.Run(sourceType, func(t *testing.T) {
+			config := testJobConfig(t)
+			config.Source.Type = sourceType
+			job, err := NewJob(config)
+			require.ErrorContains(t, err, AutoSourceCountEnv)
+			assert.Nil(t, job)
+		})
+	}
+	t.Run("explicit sources ignore automatic settings", func(t *testing.T) {
+		job, err := NewJob(testJobConfig(t))
+		require.NoError(t, err)
+		defer job.Stop()
+		ip, err := job.Source(context.Background(), &job.Config.Source)
+		require.NoError(t, err)
+		assert.Equal(t, "192.0.2.1", ip.String())
+	})
+}
+
 func TestNewJobRejectsInvalidConfig(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		change func(*JobConfig)
 	}{
 		{"domain", func(c *JobConfig) { c.Target.Domains = []string{"https://example.com/path"} }},
-		{"empty source", func(c *JobConfig) { c.Source.Type = "" }},
+		{"empty source name", func(c *JobConfig) { c.Source.Type += ", " }},
+		{"only separators", func(c *JobConfig) { c.Source.Type = "," }},
+		{"mixed automatic and explicit", func(c *JobConfig) { c.Source.Type += ", AUTO " }},
+		{"mixed address families", func(c *JobConfig) { c.Source.Type = "auto,auto-ipv6" }},
+		{"repeated automatic", func(c *JobConfig) { c.Source.Type = "auto,auto" }},
 		{"unknown source", func(c *JobConfig) { c.Source.Type = "missing-source" }},
 		{"empty target", func(c *JobConfig) { c.Target.Type = "" }},
 		{"unknown target", func(c *JobConfig) { c.Target.Type = "missing-target" }},

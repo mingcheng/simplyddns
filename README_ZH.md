@@ -1,192 +1,169 @@
-# Simply DDNS - Yet Another Universal DDNS Tools
+# SimplyDDNS
 
-- [概念](#概念)
-- [安装](#安装)
-  - [使用 mise 构建](#使用-mise-构建)
-  - [docker-compose](#docker-compose)
-- [配置](#配置)
-- [扩展](#扩展)
-  - [source](#source)
-  - [target](#target)
-- [FAQ](#faq)
-  - [WebHook 的配置](#webhook-的配置)
+[English](README.md)
 
-这个小工具简单的说，就是根据获得的 IP 地址，监控和更新对应的域名的记录。[其实我看到已经有对应的类似的项目](https://github.com/mingcheng/ddns-go)，已经是非常的好用。但是，有几点不符合我个人的期望以及要求：
+让域名自动跟随公网 IP 变化，方便通过固定域名访问家庭服务器、NAS 或其他自建服务。
 
-1. 我不需要个 UI 界面，对应的我其实更想要的是个全功能的配置文件；
-2. 需要更多的灵活性，而且可以自由的搭配配置；
-3. 作为服务端需要更加详细的日志，并能回传需要的信息。
+- **配置简单**：一个 YAML 文件即可管理，无需 Web 界面。
+- **来源灵活**：默认自动从多个服务核对地址，也可限定为自己指定的服务器。
+- **适用多种场景**：支持 IPv4、IPv6、多域名，以及 Cloudflare、阿里云 DNS、Name.com。
+- **按需更新**：避免不必要的 DNS 修改，提供日志和可选的 Webhook 通知。
 
-加上这块其实是强需求（大家都知道建站的时候，其实最后一部就是更改 DNS，非常的麻烦而且容易出错）。
-于是就有了这个应用，可能相对而言可能有比较高的配置门槛，但是有更多的灵活性。
+## 快速开始
 
-## 概念
+### 1. 安装
 
-[将 DDNS 动态注册 DNS](https://en.wikipedia.org/wiki/Dynamic_DNS) 的行为抽象为两种：一种为如何获取 IP 地址、另外一种为如何配置 DNS，简单的将如下图所示：
-
-因此，主要实现了这个两个接口，并且对应上配置就可以灵活的搭配以及运行，详细参见扩展章节。
-
-## 安装
-
-发布流程会生成 Linux amd64/arm64、macOS amd64/arm64 和 Windows amd64 的压缩包及 `checksums.txt`。每个包都包含可执行文件、许可证、文档和安全的示例配置。下载后可用 `shasum -a 256 -c checksums.txt` 校验完整性。
-
-### 使用 mise 构建
-
-项目工具链版本统一固定在 [mise.toml](mise.toml)，缺失或升级工具均使用 [mise](https://mise.jdx.dev/)。配置中的 `GOTOOLCHAIN=local` 禁止 Go 自动下载不受 mise 管理的替代工具链。
+可通过 [Homebrew](https://brew.sh/) 直接安装：
 
 ```sh
+brew install mingcheng/tap/simplyddns
+```
+
+Homebrew 用户请将下文命令中的 `./simplyddns` 替换为 `simplyddns`。
+
+也可从 [Releases](https://github.com/mingcheng/simplyddns/releases) 下载适用于 Linux、macOS 或 Windows 的压缩包并解压。以下命令以 Linux/macOS 为例，Windows 请运行 `simplyddns.exe`。
+
+<details>
+<summary>使用 mise 从源码构建</summary>
+
+安装 [mise](https://mise.jdx.dev/) 后执行：
+
+```sh
+git clone https://github.com/mingcheng/simplyddns.git
+cd simplyddns
 mise trust
-mise install
-mise exec -- make build
-./simplyddns --version
-./simplyddns --config example/basic.yml
+mise install go make
+mise exec go make -- make build
 ```
 
-最后一条命令运行无需公网访问的 loopback/sleep 示例。安装到 Go 的可执行文件目录可使用 `mise exec -- make install`。
+</details>
 
-### docker-compose
+### 2. 配置
 
-运行前需要可用的 Docker 引擎及 Compose 插件：
-
-```sh
-mise exec -- make build_docker_image
-mise exec docker-cli -- docker run --rm simplyddns:2.0.0 --version
-mise exec docker-cli -- docker compose up --build -d
-```
-
-[compose.yml](compose.yml) 默认只读挂载安全的示例配置，实际更新 DNS 时请改为自己的配置文件。容器以非特权用户运行，建议输出日志到 stderr；使用日志文件时需保证目标路径可写。[Dockerfile](Dockerfile) 内也通过 mise 安装与本地一致的 Go 版本。
-
-## 配置
-
-完整示例见 [example/](example/)。可通过 `--config` 指定配置文件；否则依次在 `/etc/simplyddns`、`$HOME/.config/simplyddns` 和当前目录中查找 `simplyddns.yml` 或 `simplyddns.yaml`。
-
-以下是 [basic.yml](example/basic.yml) 中的最小配置：
+创建 `simplyddns.yml`，或替换发行包自带的演示配置。下面以 Cloudflare 更新两个域名为例，请先换成自己的凭据和域名：
 
 ```yaml
 logfile: "/dev/stderr"
-debug: true
 
 ddns:
   - source:
-      type: "lo"
-      interval: 60 # 1 minute
+      type: auto
+      interval: 300
     target:
-      type: "sleep"
-```
-
-这个配置文件的其中含义就是从 lo 模块中获取 IP 地址后，传给 sleep 的 target 去执行。 因为 sleep 的 target 除了 sleep
-几秒以外，其实什么都不干但由此可以看出 SimplyDDNS 的工作机制。
-
-`interval` 的单位为秒，默认值为 60，小于 30 时按 30 处理，首次检查仍等待一个周期。每轮任务有 30 秒超时限制，内置操作支持停止时取消请求。无效的任务定义、域名及溢出的时间间隔会明确报错。
-
-多个 source 可用逗号分隔，如 `ipify,ipsb`。成功返回的地址必须一致，较大的 source 组还会拒绝过多失败的结果。IPv4 和 IPv6 请分别配置任务；target 根据地址自动选择 A 或 AAAA 记录。成功更新后会缓存地址，地址不变时不重复更新；失败则在后续周期重试。
-
-日志默认输出到 stderr。`/dev/stdout` 和 `/dev/stderr` 直接使用现有标准流，可用于只读容器；普通日志文件会在停止服务时关闭。
-
-## 扩展
-
-扩展通过注册 `SourceFunc` 或 `TargetFunc` 实现，参见 [func.go](func.go)、[source/lo.go](source/lo.go) 和 [target/sleep.go](target/sleep.go)。扩展必须响应传入的 context，并对无效输入和执行失败返回错误。
-
-### source
-
-| 名称         | 地址来源                                    |
-| ------------ | ------------------------------------------- |
-| `lo`         | 本地回环地址 `127.0.0.1`，用于测试          |
-| `static`     | `source.content` 中指定的 IPv4 或 IPv6 地址 |
-| `cloudflare` | Cloudflare trace 接口                       |
-| `cz88`       | CZ88 JSON 接口                              |
-| `ipify`      | ipify IPv4 接口                             |
-| `ipinfo`     | IPinfo 纯文本接口                           |
-| `ipip`       | IPIP JSON 接口                              |
-| `ipplus360`  | IPPlus360 JSON 接口                         |
-| `ipsb`       | IP.SB IPv4 接口                             |
-| `myip`       | `api.my-ip.io` 纯文本接口                   |
-| `opendns`    | OpenDNS IPv4 接口                           |
-
-部分服务只支持一种地址类型，不要在同一任务中混用返回 IPv4 和 IPv6 的 source。
-
-### target
-
-_sleep_
-
-啥都不干，就是 Sleep 暂停几秒，可以作为测试使用。
-
-_alidns_
-
-使用阿里云 DNS，`key` 为 AccessKey ID，`token` 为 AccessKey Secret。配置参见 [example/alidns.yml](example/alidns.yml)。
-
-_namedotcom_
-
-使用 Name.com，`key` 为用户名，`token` 为 API token。配置参见 [example/namedotcom.yml](example/namedotcom.yml)。
-
-_cloudflare_
-
-使用 Cloudflare，`key` 为 Zone ID，`token` 需具有该区域的 DNS 编辑权限。更新采用原地修改，保留记录 ID、TTL、代理开关及其他设置。配置参见 [example/cloudflare.yml](example/cloudflare.yml)。
-
-以上三个 DNS target 均可通过 `proxy` 配置 SOCKS5 代理，格式为 `host:port`。
-
-## FAQ
-
-_如果我只有一种请求 IP 地址的方式但是有多个域名，这样子一来重复配置二来看起来配置非常的臃肿，有没有更好的方案？_
-
-这是个比较常见的场景，你可以考虑使用 Yaml 的引用特性减少重复的配置，例如：
-
-```yaml
-defaults: &defaults
-  type: lo
-  interval: 60
-```
-
-首先定义每分钟返回个 lo 的回传本地地址，然后配置对应的域名更新：
-
-```yaml
-ddns:
-  - source:
-      <<: *defaults
-    target:
-      type: "sleep"
+      type: cloudflare
+      key: "<your-zone-id>"
+      token: "<your-api-token>"
       domains:
-        - a.com
-        - b.com
-  - source:
-      <<: *defaults
-    target:
-      type: "another"
-      domains:
-        - c.com
-        - d.com
+        - home.example.com
+        - nas.example.com
 ```
 
-这样子配置后，只需要关心 target 也就是域名的配置即可。
+Cloudflare 的 API token 需要拥有对应区域的 DNS 编辑权限。其他服务商的配置见[域名服务商](#域名服务商)。
 
-### WebHook 的配置
+### 3. 运行
 
-Webhook 在地址成功更新后触发，需要配置在对应任务内：
+```sh
+./simplyddns --version
+./simplyddns --config simplyddns.yml
+```
+
+保持进程运行即可持续检查和更新记录，首次检查会等待一个配置周期。
+
+仅体验、不修改 DNS 时，可使用[离线示例](example/basic.yml)或[自动获取地址示例](example/auto.yml)。发行包自带的默认配置也是离线示例。
+
+## 配置指南
+
+`ddns` 下的每一项是一项任务：`source` 选择地址来源，`target` 选择要更新的 DNS 服务。同一服务商和凭据下可添加多个域名；不同账号、服务商或 IPv4/IPv6 请分别配置任务。完整示例见 [example/](example/)。
+
+### 域名服务商
+
+| 服务商               | `target.type` | `key`        | `token`                       | 示例                                     |
+| -------------------- | ------------- | ------------ | ----------------------------- | ---------------------------------------- |
+| Cloudflare           | `cloudflare`  | Zone ID      | 具有 DNS 编辑权限的 API token | [cloudflare.yml](example/cloudflare.yml) |
+| 阿里云 DNS           | `alidns`      | AccessKey ID | AccessKey Secret              | [alidns.yml](example/alidns.yml)         |
+| Name.com             | `namedotcom`  | 用户名       | API token                     | [namedotcom.yml](example/namedotcom.yml) |
+| 体验模式，不更新 DNS | `sleep`       | 无需填写     | 无需填写                      | -                                        |
+
+访问 DNS 服务商需要 SOCKS5 代理时，可设置 `target.proxy`，例如 `127.0.0.1:1080`。该设置仅用于 DNS 更新，不控制地址来源请求。
+
+### 地址来源
+
+**默认使用自动模式**：省略 `source.type` 或填写 `auto`，即可通过多个服务核对 IPv4 地址。
+
+| 使用方式       | `source.type`                                                               |
+| -------------- | --------------------------------------------------------------------------- |
+| 自动获取 IPv4  | `auto` 或 `auto-ipv4`                                                       |
+| 自动获取 IPv6  | `auto-ipv6`，见 [ipv6.yml](example/ipv6.yml)                                |
+| 自行指定服务器 | 如 `ipify` 或 `ipify,ipsb`，见 [multi-source.yml](example/multi-source.yml) |
+| 使用固定地址   | `static`，地址填写在 `source.content`，见 [static.yml](example/static.yml)  |
+| 离线体验       | `lo`                                                                        |
+
+指定服务器后，**只请求指定的服务器，失败也不会改用其他来源**。多个来源成功返回的地址必须一致。自动模式不能与指定服务器混用，也不要在同一任务中混合 IPv4 和 IPv6 来源。
+
+自动模式默认并发请求 3 个来源，可通过环境变量 `SIMPLYDDNS_AUTO_SOURCE_COUNT` 调整：
+
+```sh
+SIMPLYDDNS_AUTO_SOURCE_COUNT=5 ./simplyddns --config simplyddns.yml
+```
+
+| 并发来源数 | 至少需要一致的结果数 |
+| ---------- | -------------------- |
+| 3          | 2                    |
+| 5          | 3                    |
+| 7          | 4                    |
+
+仅支持表中的取值；未设置时使用 3，空值或无效值会报错。此配置只影响自动模式。相同结果不足时不修改 DNS，稍后再次检查。
+
+<details>
+<summary>查看全部可指定的服务器名称</summary>
+
+这些来源均无需 API key：
+
+- **IPv4**：`ipify`、`ipsb`、`opendns`、`icanhazip-ipv4`、`ident-ipv4`、`myexternalip-ipv4`、`tnedi-ipv4`、`wtfismyip-ipv4`。
+- **IPv6**：`icanhazip-ipv6`、`ident-ipv6`、`ipify-ipv6`、`ipinfo-ipv6`、`ipsb-ipv6`、`opendns-ipv6`、`tnedi-ipv6`、`wtfismyip-ipv6`。
+- **地址类型由实际网络连接决定**：
+  `cloudflare`、`countryis`、`curlmyip`、`cz88`、`eth0`、`freeipapi`、`httpbin`、`httpbingo`、`icanhazip`、`ident`、
+  `ifconfigco`、`ifconfigio`、`ifconfigme`、`ipaddress`、`ipconfigio`、`ipecho`、`ipguide`、`ipify-dual`、`ipinfo`、`ipip`、
+  `iplocation`、`ipplus360`、`ipquery`、`ipsb-dual`、`ipwhois`、`myexternalip`、`myip`、`tencent`、`tnedi`、`tyk`、`ustc`、`wtfismyip`、`zxinc`。
+
+需要固定地址类型时，请从对应的 IPv4 或 IPv6 列表中选择。
+
+</details>
+
+> 代理可能让来源返回代理出口 IP，即使多个结果一致也不能保证是本机真实公网 IP。用于 DDNS 前请检查直连或代理绕过规则。IPv6 来源需要可用的 IPv6 网络，或具备 IPv6 出口的代理。
+
+### 常用选项
+
+| 配置项            | 用法                                                                               |
+| ----------------- | ---------------------------------------------------------------------------------- |
+| `source.interval` | 检查间隔，单位为秒。默认 60，小于 30 时按 30 处理；日常使用建议设置为 300 或更长。 |
+| `logfile`         | 默认输出到 stderr，也可填写 `/dev/stdout` 或可写的日志文件路径。                   |
+| `debug`           | 设置为 `true` 可查看更详细的排查日志。                                             |
+
+通过 `--config` 指定配置文件；未指定时，依次在 `/etc/simplyddns`、`$HOME/.config/simplyddns` 和当前目录查找 `simplyddns.yml` 或 `simplyddns.yaml`。
+
+### 更新通知
+
+需要在 DNS 更新成功后接收通知时，在对应任务中添加 `webhook`，与 `source`、`target` 同级：
 
 ```yaml
-ddns:
-  - source:
-      type: lo
-      interval: 60
-    target:
-      type: sleep
-    webhook:
-      url: https://example.com/webhook
-      token: "<可选的 Bearer token>"
+webhook:
+  url: "https://example.com/ddns-hook"
+  token: "<optional-bearer-token>"
 ```
 
-类似这样子配置后，当地址发生改变时，会将结果和更改的域名结果 POST 到对应的地址。结果的格式如下：
+通知包含新地址、域名和更新时间。也可使用 `username`、`password` 配置认证，建议使用 HTTPS 地址。
 
-```json
-{
-    "address": "127.0.0.1",
-    "domains": "a.com,b.com",
-    "now": "2022-07-13T15:00:10.931809+08:00"
-}
+## Docker 部署
+
+准备好 Docker 引擎及 Compose 后，将 [compose.yml](compose.yml) 中的配置挂载路径改为自己的文件，再在仓库目录执行：
+
+```sh
+mise exec docker-cli -- docker compose up --build -d
 ```
 
-如果有多个域名的结果，会用逗号分隔。
+默认挂载的是离线示例，不会更新 DNS。Compose 同样支持 `SIMPLYDDNS_AUTO_SOURCE_COUNT` 环境变量。
 
-请求还会发送 `Address` 和 `Domains` 头；也可使用 `username`、`password` 配置 Basic 认证，携带凭据时应使用 HTTPS。任意 2xx 响应都视为成功；Webhook 失败会记录日志，但不会回滚或重复已成功的 DNS 更新。
+## 许可证
 
-`- eof -`
+[MIT](LICENSE)

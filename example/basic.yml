@@ -13,6 +13,7 @@ debug: true
 
 ddns:
   - source:
+      # Explicit offline demo; auto (the default) queries public IPv4 sources.
       type: "lo"
       interval: 60 # 1 minute
     target:

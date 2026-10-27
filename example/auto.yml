@@ -1,0 +1,14 @@
+logfile: "/dev/stderr"
+debug: true
+
+ddns:
+  - source:
+      # Omit type for the same default; use auto-ipv6 for IPv6.
+      type: auto
+      interval: 300 # seconds
+    target:
+      type: sleep
+
+# SIMPLYDDNS_AUTO_SOURCE_COUNT controls concurrent samples (default: 3).
+# Valid counts are 3, 5 or 7, requiring 2, 3 or 4 matching IPs respectively.
+# Requests use the current network/proxy; a majority may still be a proxy IP.
