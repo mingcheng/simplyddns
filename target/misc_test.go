@@ -3,6 +3,9 @@ package target
 import (
 	"context"
 	"encoding/json"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io"
 	"net"
 	"net/http"
@@ -66,7 +69,7 @@ func TestRecordType(t *testing.T) {
 }
 
 func TestTargetsRejectInvalidInput(t *testing.T) {
-	for _, name := range []string{"cloudflare", "alidns", "namedotcom"} {
+	for _, name := range []string{"cloudflare", "alidns", "namedotcom", "dnspod", "route53", "huaweicloud", "godaddy", "powerdns"} {
 		t.Run(name, func(t *testing.T) {
 			mockAPI(t, func(w http.ResponseWriter, r *http.Request) {
 				t.Errorf("invalid target configuration must not make HTTP requests")
@@ -79,6 +82,75 @@ func TestTargetsRejectInvalidInput(t *testing.T) {
 			require.Error(t, fn(context.Background(), &ip, nil))
 			require.Error(t, fn(context.Background(), &ip, &simplyddns.TargetConfig{}))
 			require.Error(t, fn(context.Background(), &ip, &simplyddns.TargetConfig{Key: "key", Token: "token"}))
+		})
+	}
+}
+
+func testTargetCancellation(t *testing.T, name string, config simplyddns.TargetConfig) {
+	t.Helper()
+	mockTransport(t, roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		<-r.Context().Done()
+		return nil, r.Context().Err()
+	}))
+	fn, err := simplyddns.TargetFuncByName(name)
+	require.NoError(t, err)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+	ip := net.ParseIP("192.0.2.1")
+	require.ErrorIs(t, fn(ctx, &ip, &config), context.DeadlineExceeded)
+}
+
+func TestDNSNames(t *testing.T) {
+	for _, tc := range []struct {
+		name, zone string
+		domains    []string
+		want       []dnsName
+	}{
+		{"inferred", "", []string{"example.co.uk", "HOME.example.co.uk"},
+			[]dnsName{{"example.co.uk", "example.co.uk", "@"}, {"home.example.co.uk", "example.co.uk", "home"}}},
+		{"delegated", "sub.example.com.", []string{"home.sub.example.com"},
+			[]dnsName{{"home.sub.example.com", "sub.example.com", "home"}}},
+		{"duplicates", "", []string{"home.example.com", "HOME.example.com"},
+			[]dnsName{{"home.example.com", "example.com", "home"}}},
+		{"empty", "", nil, nil},
+		{"invalid domain", "", []string{"https://example.com/path"}, nil},
+		{"invalid zone", "invalid", []string{"home.example.com"}, nil},
+		{"outside zone", "example.com", []string{"badexample.com"}, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			names, err := dnsNames(&simplyddns.TargetConfig{Domains: tc.domains}, tc.zone)
+			if tc.want == nil {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, names)
+		})
+	}
+	_, err := dnsNames(nil, "")
+	require.Error(t, err)
+}
+
+func TestTargetFileLayout(t *testing.T) {
+	for _, name := range []string{"alidns", "cloudflare", "namedotcom", "sleep", "dnspod", "route53", "huaweicloud", "godaddy", "powerdns"} {
+		t.Run(name, func(t *testing.T) {
+			_, err := simplyddns.TargetFuncByName(name)
+			require.NoError(t, err)
+			require.FileExists(t, name+"_test.go")
+			file, err := parser.ParseFile(token.NewFileSet(), name+".go", nil, 0)
+			require.NoError(t, err)
+			registrations := 0
+			ast.Inspect(file, func(node ast.Node) bool {
+				call, ok := node.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				if fn, ok := call.Fun.(*ast.Ident); ok && fn.Name == "registerTarget" {
+					registrations++
+				}
+				return true
+			})
+			assert.Equal(t, 1, registrations)
 		})
 	}
 }

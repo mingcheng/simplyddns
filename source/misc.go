@@ -114,3 +114,21 @@ func registerSource(name string, fn ddns.SourceFunc) {
 		panic(err)
 	}
 }
+
+func registerHTTPSource(name string, family int, fn ddns.SourceFunc) {
+	registerSource(name, func(ctx context.Context, config *ddns.SourceConfig) (*net.IP, error) {
+		addr, err := fn(ctx, config)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", name, err)
+		}
+
+		actualFamily := 6
+		if addr.To4() != nil {
+			actualFamily = 4
+		}
+		if family != 0 && actualFamily != family {
+			return nil, fmt.Errorf("%s: expected IPv%d, got IPv%d", name, family, actualFamily)
+		}
+		return addr, nil
+	})
+}
